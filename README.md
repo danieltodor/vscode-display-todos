@@ -7,6 +7,7 @@ A VS Code extension that scans your workspace for **TODO**, **FIXME**, **HACK**,
 - **Automatic workspace scan** — scans all files on startup and reports matches in the Problems panel.
 - **Re-scan on save** — when you save a file, it is re-scanned immediately.
 - **Configurable keywords & severity** — add your own keywords or change severities (error, warning, info, hint).
+- **Case-sensitive by default** — matches exact case (`TODO` but not `todo`). Can be toggled to case-insensitive.
 - **Include / exclude globs** — control which files are scanned.
 
 ## Default Severities
@@ -28,6 +29,7 @@ This extension contributes the following settings:
 | `searchTodos.keywords` | Array of `{ keyword, severity }` objects | See above |
 | `searchTodos.include` | Glob pattern for files to include | `**/*` |
 | `searchTodos.exclude` | Comma-separated glob patterns to exclude | `**/node_modules/**,**/.git/**,**/dist/**,**/out/**,**/.vscode/**` |
+| `searchTodos.caseSensitive` | Whether keyword matching is case-sensitive | `true` |
 
 ### Example: Add a custom keyword
 
@@ -44,14 +46,3 @@ This extension contributes the following settings:
   ]
 }
 ```
-
-## Development
-
-```bash
-npm install
-# Press F5 in VS Code to launch the Extension Development Host
-```
-
-## License
-
-MIT

@@ -60,6 +60,11 @@
           "type": "string",
           "default": "**/node_modules/**,**/.git/**,**/dist/**,**/out/**,**/.vscode/**",
           "description": "Comma-separated glob patterns for files to exclude when scanning."
+        },
+        "searchTodos.caseSensitive": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether keyword matching is case-sensitive. When true, only exact case matches (e.g. TODO, not todo) are detected."
         }
       }
     }

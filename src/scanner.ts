@@ -9,6 +9,7 @@ export interface ScanConfig {
   keywords: KeywordConfig[];
   include: string;
   exclude: string;
+  caseSensitive: boolean;
 }
 
 const SEVERITY_MAP: Record<string, vscode.DiagnosticSeverity> = {
@@ -19,15 +20,18 @@ const SEVERITY_MAP: Record<string, vscode.DiagnosticSeverity> = {
 };
 
 /**
- * Build a lookup from uppercase keyword to its configured severity.
+ * Build a lookup from keyword to its configured severity.
+ * Keys are stored uppercase when case-insensitive, or as-is when case-sensitive.
  */
 function buildSeverityLookup(
-  keywords: KeywordConfig[]
+  keywords: KeywordConfig[],
+  caseSensitive: boolean
 ): Map<string, vscode.DiagnosticSeverity> {
   const map = new Map<string, vscode.DiagnosticSeverity>();
   for (const kw of keywords) {
+    const key = caseSensitive ? kw.keyword : kw.keyword.toUpperCase();
     map.set(
-      kw.keyword.toUpperCase(),
+      key,
       SEVERITY_MAP[kw.severity] ?? vscode.DiagnosticSeverity.Warning
     );
   }
@@ -38,12 +42,13 @@ function buildSeverityLookup(
  * Build a regex that matches any of the configured keywords.
  * Captures: group 1 = keyword, group 2 = optional trailing text after `:` or whitespace.
  */
-function buildPattern(keywords: KeywordConfig[]): RegExp {
+function buildPattern(keywords: KeywordConfig[], caseSensitive: boolean): RegExp {
   const escaped = keywords.map((kw) =>
     kw.keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
   );
+  const flags = caseSensitive ? "" : "i";
   // Match keyword at a word boundary, optionally followed by : and/or whitespace, then trailing text
-  return new RegExp(`\\b(${escaped.join("|")})\\b[:\\s]?(.*)`, "i");
+  return new RegExp(`\\b(${escaped.join("|")})\\b[:\\s]?(.*)`, flags);
 }
 
 /**
@@ -57,8 +62,8 @@ export function scanDocument(
     return [];
   }
 
-  const pattern = buildPattern(config.keywords);
-  const severityLookup = buildSeverityLookup(config.keywords);
+  const pattern = buildPattern(config.keywords, config.caseSensitive);
+  const severityLookup = buildSeverityLookup(config.keywords, config.caseSensitive);
   const diagnostics: vscode.Diagnostic[] = [];
 
   for (let lineIndex = 0; lineIndex < document.lineCount; lineIndex++) {
@@ -68,7 +73,7 @@ export function scanDocument(
       continue;
     }
 
-    const keyword = match[1].toUpperCase();
+    const keyword = config.caseSensitive ? match[1] : match[1].toUpperCase();
     const trailing = match[2]?.trim() ?? "";
     const message = trailing ? `${keyword}: ${trailing}` : keyword;
 
@@ -105,6 +110,7 @@ export function readConfig(): ScanConfig {
     ]),
     include: cfg.get<string>("include", "**/*"),
     exclude: cfg.get<string>("exclude", "**/node_modules/**,**/.git/**,**/dist/**,**/out/**,**/.vscode/**"),
+    caseSensitive: cfg.get<boolean>("caseSensitive", true),
   };
 }
 

@@ -12,6 +12,7 @@ const DEFAULT_CONFIG: ScanConfig = {
   ],
   include: "**/*",
   exclude: "**/node_modules/**",
+  caseSensitive: true,
 };
 
 /**
@@ -64,9 +65,16 @@ suite("Scanner — scanDocument", () => {
     assert.strictEqual(diagnostics.length, 0);
   });
 
-  test("is case-insensitive", async () => {
-    const doc = await docFromText("// todo: lowercase works too");
+  test("is case-sensitive by default", async () => {
+    const doc = await docFromText("// todo: lowercase should not match");
     const diagnostics = scanDocument(doc, DEFAULT_CONFIG);
+    assert.strictEqual(diagnostics.length, 0);
+  });
+
+  test("matches case-insensitively when configured", async () => {
+    const doc = await docFromText("// todo: lowercase works too");
+    const ciConfig: ScanConfig = { ...DEFAULT_CONFIG, caseSensitive: false };
+    const diagnostics = scanDocument(doc, ciConfig);
     assert.strictEqual(diagnostics.length, 1);
     assert.strictEqual(diagnostics[0].message, "TODO: lowercase works too");
   });
