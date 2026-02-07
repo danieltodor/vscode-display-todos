@@ -13,6 +13,7 @@ const DEFAULT_CONFIG: ScanConfig = {
   include: ["**/*"],
   exclude: ["**/node_modules/**"],
   caseSensitive: true,
+  displayName: "Search TODOs",
 };
 
 /**

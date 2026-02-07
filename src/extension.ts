@@ -2,11 +2,14 @@ import * as vscode from "vscode";
 import { readConfig, scanDocument, scanWorkspace } from "./scanner";
 
 export function activate(context: vscode.ExtensionContext) {
+  const displayName: string =
+    context.extension.packageJSON.displayName ?? "Search TODOs";
+
   const diagnosticCollection =
     vscode.languages.createDiagnosticCollection("searchTodos");
   context.subscriptions.push(diagnosticCollection);
 
-  let config = readConfig();
+  let config = readConfig(displayName);
 
   // Initial full workspace scan
   scanWorkspace(diagnosticCollection, config);
@@ -38,7 +41,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("searchTodos")) {
-        config = readConfig();
+        config = readConfig(displayName);
         scanWorkspace(diagnosticCollection, config);
       }
     })

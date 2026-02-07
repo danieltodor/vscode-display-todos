@@ -10,6 +10,7 @@ export interface ScanConfig {
   include: string[];
   exclude: string[];
   caseSensitive: boolean;
+  displayName: string;
 }
 
 const SEVERITY_MAP: Record<string, vscode.DiagnosticSeverity> = {
@@ -88,7 +89,7 @@ export function scanDocument(
       severityLookup.get(keyword) ?? vscode.DiagnosticSeverity.Warning;
 
     const diagnostic = new vscode.Diagnostic(range, message, severity);
-    diagnostic.source = "Search TODOs";
+    diagnostic.source = config.displayName;
     diagnostics.push(diagnostic);
   }
 
@@ -98,7 +99,7 @@ export function scanDocument(
 /**
  * Read the extension configuration from VS Code settings.
  */
-export function readConfig(): ScanConfig {
+export function readConfig(displayName: string): ScanConfig {
   const cfg = vscode.workspace.getConfiguration("searchTodos");
   return {
     keywords: cfg.get<KeywordConfig[]>("keywords", [
@@ -118,6 +119,7 @@ export function readConfig(): ScanConfig {
       "**/out/**"
     ]),
     caseSensitive: cfg.get<boolean>("caseSensitive", true),
+    displayName,
   };
 }
 
