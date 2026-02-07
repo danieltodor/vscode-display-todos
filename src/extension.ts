@@ -11,9 +11,10 @@ export function activate(context: vscode.ExtensionContext)
     context.subscriptions.push(diagnosticCollection);
 
     let config = readConfig(displayName);
+    const inScopeUris = new Set<string>();
 
     // Initial full workspace scan
-    scanWorkspace(diagnosticCollection, config);
+    scanWorkspace(diagnosticCollection, config, inScopeUris);
 
     // Re-scan a single file on save
     context.subscriptions.push(
@@ -33,11 +34,14 @@ export function activate(context: vscode.ExtensionContext)
         })
     );
 
-    // Clear diagnostics when a file is closed (keeps Problems panel tidy)
+    // Clear diagnostics when a file is closed, only if it's outside the include/exclude scope
     context.subscriptions.push(
         vscode.workspace.onDidCloseTextDocument((document) =>
         {
-            diagnosticCollection.delete(document.uri);
+            if (!inScopeUris.has(document.uri.toString()))
+            {
+                diagnosticCollection.delete(document.uri);
+            }
         })
     );
 
@@ -48,7 +52,7 @@ export function activate(context: vscode.ExtensionContext)
             if (e.affectsConfiguration("searchTodos"))
             {
                 config = readConfig(displayName);
-                scanWorkspace(diagnosticCollection, config);
+                scanWorkspace(diagnosticCollection, config, inScopeUris);
             }
         })
     );

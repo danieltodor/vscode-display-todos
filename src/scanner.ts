@@ -153,10 +153,12 @@ function toGlob(patterns: string[]): string
  */
 export async function scanWorkspace(
     diagnosticCollection: vscode.DiagnosticCollection,
-    config: ScanConfig
+    config: ScanConfig,
+    inScopeUris: Set<string>
 ): Promise<void>
 {
     diagnosticCollection.clear();
+    inScopeUris.clear();
 
     const globalEnable = vscode.workspace
         .getConfiguration("searchTodos")
@@ -172,6 +174,7 @@ export async function scanWorkspace(
 
     for (const uri of uris)
     {
+        inScopeUris.add(uri.toString());
         try
         {
             const document = await vscode.workspace.openTextDocument(uri);
