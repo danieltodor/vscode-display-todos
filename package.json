@@ -1,7 +1,7 @@
 {
   "name": "search-todos",
   "displayName": "Search TODOs",
-  "description": "",
+  "description": "Scans your workspace for TODO, FIXME, HACK, BUG, and XXX comments and displays them in the Problems panel.",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.109.0"
@@ -9,8 +9,61 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./dist/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Search TODOs",
+      "properties": {
+        "searchTodos.keywords": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "keyword": {
+                "type": "string",
+                "description": "The keyword to search for (e.g. TODO, FIXME)."
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "error",
+                  "warning",
+                  "info",
+                  "hint"
+                ],
+                "description": "The diagnostic severity for this keyword."
+              }
+            },
+            "required": [
+              "keyword",
+              "severity"
+            ]
+          },
+          "default": [
+            { "keyword": "FIXME", "severity": "error" },
+            { "keyword": "BUG", "severity": "error" },
+            { "keyword": "TODO", "severity": "warning" },
+            { "keyword": "HACK", "severity": "warning" },
+            { "keyword": "XXX", "severity": "warning" }
+          ],
+          "description": "List of keywords to scan for and their diagnostic severities."
+        },
+        "searchTodos.include": {
+          "type": "string",
+          "default": "**/*",
+          "description": "Glob pattern for files to include when scanning."
+        },
+        "searchTodos.exclude": {
+          "type": "string",
+          "default": "**/node_modules/**,**/.git/**,**/dist/**,**/out/**,**/.vscode/**",
+          "description": "Comma-separated glob patterns for files to exclude when scanning."
+        }
+      }
+    }
+  },
   "scripts": {
     "vscode:prepublish": "npm run package",
     "compile": "npm run check-types && npm run lint && node esbuild.js",
