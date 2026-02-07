@@ -19,6 +19,14 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
+  // Re-scan a file when it is opened in the editor
+  context.subscriptions.push(
+    vscode.workspace.onDidOpenTextDocument((document) => {
+      const diagnostics = scanDocument(document, config);
+      diagnosticCollection.set(document.uri, diagnostics);
+    })
+  );
+
   // Clear diagnostics when a file is closed (keeps Problems panel tidy)
   context.subscriptions.push(
     vscode.workspace.onDidCloseTextDocument((document) => {
