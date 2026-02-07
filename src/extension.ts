@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { readConfig, scanDocument, scanWorkspace } from "./scanner";
+import { readConfig, scanDocument, scanWorkspace, toGlob, ScanConfig, getFileUris } from "./scanner";
 
 export function activate(context: vscode.ExtensionContext)
 {
@@ -45,6 +45,15 @@ export function activate(context: vscode.ExtensionContext)
         })
     );
 
+    /**
+     * Check whether a URI is within the configured include/exclude scope
+     */
+    async function isInScope(uri: vscode.Uri, cfg: ScanConfig): Promise<boolean>
+    {
+        const uris = await getFileUris(cfg);
+        return uris.some((u) => u.toString() === uri.toString());
+    }
+
     // Handle file creates, deletes, and renames
     const watcher = vscode.workspace.createFileSystemWatcher("**/*");
 
@@ -58,6 +67,10 @@ export function activate(context: vscode.ExtensionContext)
     {
         try
         {
+            if (!await isInScope(uri, config))
+            {
+                return;
+            }
             const document = await vscode.workspace.openTextDocument(uri);
             inScopeUris.add(uri.toString());
             const diagnostics = scanDocument(document, config);

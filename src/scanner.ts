@@ -134,7 +134,7 @@ export function readConfig(displayName: string): ScanConfig
  * Convert an array of glob patterns into a single brace-expanded glob
  * suitable for `workspace.findFiles`.
  */
-function toGlob(patterns: string[]): string
+export function toGlob(patterns: string[]): string
 {
     const filtered = patterns.map((p) => p.trim()).filter(Boolean);
     if (filtered.length === 0)
@@ -168,9 +168,7 @@ export async function scanWorkspace(
         return;
     }
 
-    const includeGlob = toGlob(config.include);
-    const excludeGlob = toGlob(config.exclude);
-    const uris = await vscode.workspace.findFiles(includeGlob, excludeGlob);
+    const uris = await getFileUris(config);
 
     for (const uri of uris)
     {
@@ -188,4 +186,12 @@ export async function scanWorkspace(
             // Skip files that can't be opened (binary, too large, etc.)
         }
     }
+}
+
+export async function getFileUris(config: ScanConfig)
+{
+    const includeGlob = toGlob(config.include);
+    const excludeGlob = toGlob(config.exclude);
+    const uris = await vscode.workspace.findFiles(includeGlob, excludeGlob);
+    return uris;
 }
