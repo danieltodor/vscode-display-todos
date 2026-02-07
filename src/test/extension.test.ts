@@ -10,8 +10,8 @@ const DEFAULT_CONFIG: ScanConfig = {
     { keyword: "HACK", severity: "warning" },
     { keyword: "XXX", severity: "warning" },
   ],
-  include: "**/*",
-  exclude: "**/node_modules/**",
+  include: ["**/*"],
+  exclude: ["**/node_modules/**"],
   caseSensitive: true,
 };
 

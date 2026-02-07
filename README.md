@@ -27,8 +27,8 @@ This extension contributes the following settings:
 | Setting | Description | Default |
 |---------|-------------|---------|
 | `searchTodos.keywords` | Array of `{ keyword, severity }` objects | See above |
-| `searchTodos.include` | Glob pattern for files to include | `**/*` |
-| `searchTodos.exclude` | Comma-separated glob patterns to exclude | `**/node_modules/**,**/.git/**,**/dist/**,**/out/**,**/.vscode/**` |
+| `searchTodos.include` | Glob patterns for files to include | `["**/*"]` |
+| `searchTodos.exclude` | Glob patterns for files to exclude | `["**/.git/**", "**/.vscode/**", "**/node_modules/**", "**/build/**", "**/dist/**", "**/out/**"]` |
 | `searchTodos.caseSensitive` | Whether keyword matching is case-sensitive | `true` |
 
 ### Example: Add a custom keyword

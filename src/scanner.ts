@@ -7,8 +7,8 @@ export interface KeywordConfig {
 
 export interface ScanConfig {
   keywords: KeywordConfig[];
-  include: string;
-  exclude: string;
+  include: string[];
+  exclude: string[];
   caseSensitive: boolean;
 }
 
@@ -108,27 +108,32 @@ export function readConfig(): ScanConfig {
       { keyword: "HACK", severity: "warning" },
       { keyword: "XXX", severity: "warning" },
     ]),
-    include: cfg.get<string>("include", "**/*"),
-    exclude: cfg.get<string>("exclude", "**/node_modules/**,**/.git/**,**/dist/**,**/out/**,**/.vscode/**"),
+    include: cfg.get<string[]>("include", ["**/*"]),
+    exclude: cfg.get<string[]>("exclude", [
+      "**/.git/**",
+      "**/.vscode/**",
+      "**/node_modules/**",
+      "**/build/**",
+      "**/dist/**",
+      "**/out/**"
+    ]),
     caseSensitive: cfg.get<boolean>("caseSensitive", true),
   };
 }
 
 /**
- * Build the exclude pattern for `workspace.findFiles`.
- * Combines the user-configured exclude with the workspace `files.exclude` setting.
- * `workspace.findFiles` accepts a single glob string or a RelativePattern —
- * we convert the comma-separated list into a brace-expanded glob: `{a,b,c}`.
+ * Convert an array of glob patterns into a single brace-expanded glob
+ * suitable for `workspace.findFiles`.
  */
-function buildExcludeGlob(exclude: string): string {
-  const parts = exclude
-    .split(",")
-    .map((p) => p.trim())
-    .filter(Boolean);
-  if (parts.length === 1) {
-    return parts[0];
+function toGlob(patterns: string[]): string {
+  const filtered = patterns.map((p) => p.trim()).filter(Boolean);
+  if (filtered.length === 0) {
+    return "";
   }
-  return `{${parts.join(",")}}`;
+  if (filtered.length === 1) {
+    return filtered[0];
+  }
+  return `{${filtered.join(",")}}`;
 }
 
 /**
@@ -140,8 +145,9 @@ export async function scanWorkspace(
 ): Promise<void> {
   diagnosticCollection.clear();
 
-  const excludeGlob = buildExcludeGlob(config.exclude);
-  const uris = await vscode.workspace.findFiles(config.include, excludeGlob);
+  const includeGlob = toGlob(config.include) || "**/*";
+  const excludeGlob = toGlob(config.exclude) || undefined;
+  const uris = await vscode.workspace.findFiles(includeGlob, excludeGlob);
 
   for (const uri of uris) {
     try {

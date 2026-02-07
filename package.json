@@ -52,14 +52,27 @@
           "description": "List of keywords to scan for and their diagnostic severities."
         },
         "searchTodos.include": {
-          "type": "string",
-          "default": "**/*",
-          "description": "Glob pattern for files to include when scanning."
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": ["**/*"],
+          "description": "Glob patterns for files to include when scanning."
         },
         "searchTodos.exclude": {
-          "type": "string",
-          "default": "**/node_modules/**,**/.git/**,**/dist/**,**/out/**,**/.vscode/**",
-          "description": "Comma-separated glob patterns for files to exclude when scanning."
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/.git/**",
+            "**/.vscode/**",
+            "**/node_modules/**",
+            "**/build/**",
+            "**/dist/**",
+            "**/out/**"
+          ],
+          "description": "Glob patterns for files to exclude when scanning."
         },
         "searchTodos.caseSensitive": {
           "type": "boolean",
