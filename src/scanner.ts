@@ -58,6 +58,16 @@ function buildPattern(keywords: KeywordConfig[], caseSensitive: boolean): RegExp
 }
 
 /**
+ * Check whether scanning is enabled for a given document,
+ * respecting language-specific overrides.
+ */
+export function isEnabledFor(document: vscode.TextDocument): boolean
+{
+    const cfg = vscode.workspace.getConfiguration("searchTodos", document);
+    return cfg.get<boolean>("enable", true);
+}
+
+/**
  * Scan a single document for TODO-style comments and return diagnostics.
  */
 export function scanDocument(
@@ -65,7 +75,7 @@ export function scanDocument(
     config: ScanConfig
 ): vscode.Diagnostic[]
 {
-    if (config.keywords.length === 0)
+    if (!isEnabledFor(document) || config.keywords.length === 0)
     {
         return [];
     }
@@ -147,6 +157,14 @@ export async function scanWorkspace(
 ): Promise<void>
 {
     diagnosticCollection.clear();
+
+    const globalEnable = vscode.workspace
+        .getConfiguration("searchTodos")
+        .get<boolean>("enable", true);
+    if (!globalEnable)
+    {
+        return;
+    }
 
     const includeGlob = toGlob(config.include);
     const excludeGlob = toGlob(config.exclude);

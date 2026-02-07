@@ -34,3 +34,4 @@ comments, and displays them in the `problems` panel.
 | `searchTodos.include` | `string[]` | `["**/*"]` | Glob patterns for files to include when scanning. |
 | `searchTodos.exclude` | `string[]` | `["**/.git/**", "**/.vscode/**", "**/node_modules/**", "**/build/**", "**/dist/**", "**/out/**"]` | Glob patterns for files to exclude when scanning. |
 | `searchTodos.caseSensitive` | `boolean` | `true` | Whether keyword matching is case-sensitive. When `true`, only exact-case matches are detected. |
+| `searchTodos.enable` | `boolean` | `true` | Enable or disable scanning for TODO comments. When false, all diagnostics are cleared and no scanning occurs. Can be overridden per language (e.g. \"[python]\": { \"searchTodos.enable\": false }). |
