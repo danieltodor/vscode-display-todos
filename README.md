@@ -1,48 +1,36 @@
-# Search TODOs
+## Overview
 
-A VS Code extension that scans your workspace for **TODO**, **FIXME**, **HACK**, **BUG**, and **XXX** comments and displays them as diagnostics in the **Problems** panel.
+This extension will scan your workspace and opened files for **FIXME**, **BUG**, **TODO**, **HACK**, **XXX**, **NOTE**, **REVIEW**
+comments, and displays them in the `problems` panel.
+
+![Example](media/example.png)
 
 ## Features
 
-- **Automatic workspace scan** — scans all files on startup and reports matches in the Problems panel.
-- **Re-scan on save** — when you save a file, it is re-scanned immediately.
-- **Configurable keywords & severity** — add your own keywords or change severities (error, warning, info, hint).
-- **Case-sensitive by default** — matches exact case (`TODO` but not `todo`). Can be toggled to case-insensitive.
-- **Include / exclude globs** — control which files are scanned.
+- **Full workspace scan on startup** — automatically scans every file in the workspace, and reports all matches in the problems panel.
+- **Re-scan on save** — when you save a file, it is immediately re-scanned and its diagnostics are updated.
+- **Re-scan on open** — when you open a file in the editor, it is re-scanned so new changes are picked up right away.
+- **Configurable keywords & severity** — define your own keywords and assign each one a diagnostic severity (`error`, `warning`, `info`, `hint`).
+- **Case-sensitive by default** — only exact-case matches are detected (e.g. `TODO` but not `todo`). Can be toggled to case-insensitive via settings.
+- **Include / exclude glob patterns** — control which files are scanned using glob patterns.
 
-## Default Severities
+## Default Keywords & Severities
 
 | Keyword | Severity |
-|---------|----------|
-| FIXME   | Error    |
-| BUG     | Error    |
-| TODO    | Warning  |
-| HACK    | Warning  |
-| XXX     | Warning  |
+|-|-|
+| FIXME | Error |
+| BUG | Error |
+| TODO | Warning |
+| HACK | Warning |
+| XXX | Warning |
+| NOTE | info |
+| REVIEW | hint |
 
 ## Extension Settings
 
-This extension contributes the following settings:
-
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `searchTodos.keywords` | Array of `{ keyword, severity }` objects | See above |
-| `searchTodos.include` | Glob patterns for files to include | `["**/*"]` |
-| `searchTodos.exclude` | Glob patterns for files to exclude | `["**/.git/**", "**/.vscode/**", "**/node_modules/**", "**/build/**", "**/dist/**", "**/out/**"]` |
-| `searchTodos.caseSensitive` | Whether keyword matching is case-sensitive | `true` |
-
-### Example: Add a custom keyword
-
-```jsonc
-// settings.json
-{
-  "searchTodos.keywords": [
-    { "keyword": "FIXME", "severity": "error" },
-    { "keyword": "BUG", "severity": "error" },
-    { "keyword": "TODO", "severity": "warning" },
-    { "keyword": "HACK", "severity": "warning" },
-    { "keyword": "XXX", "severity": "warning" },
-    { "keyword": "NOTE", "severity": "info" }
-  ]
-}
-```
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `searchTodos.keywords` | `array` | See above | Array of `{ "keyword": string, "severity": "error" \| "warning" \| "info" \| "hint" }` objects defining which keywords to scan for and their diagnostic severity. |
+| `searchTodos.include` | `string[]` | `["**/*"]` | Glob patterns for files to include when scanning. |
+| `searchTodos.exclude` | `string[]` | `["**/.git/**", "**/.vscode/**", "**/node_modules/**", "**/build/**", "**/dist/**", "**/out/**"]` | Glob patterns for files to exclude when scanning. |
+| `searchTodos.caseSensitive` | `boolean` | `true` | Whether keyword matching is case-sensitive. When `true`, only exact-case matches are detected. |

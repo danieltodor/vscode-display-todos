@@ -1,111 +1,144 @@
 {
-  "name": "search-todos",
-  "displayName": "Search TODOs",
-  "description": "Scans your workspace for TODO, FIXME, HACK, BUG, and XXX comments and displays them in the Problems panel.",
-  "version": "0.0.1",
-  "engines": {
-    "vscode": "^1.109.0"
-  },
-  "categories": [
-    "Other"
-  ],
-  "activationEvents": [
-    "onStartupFinished"
-  ],
-  "main": "./dist/extension.js",
-  "contributes": {
-    "configuration": {
-      "title": "Search TODOs",
-      "properties": {
-        "searchTodos.keywords": {
-          "type": "array",
-          "items": {
-            "type": "object",
+    "name": "search-todos",
+    "displayName": "Search TODOs",
+    "description": "Scans your workspace for TODO, FIXME, HACK, etc comments and displays them in the problems panel.",
+    "icon": "./media/icon.png",
+    "version": "0.0.1",
+    "preview": false,
+    "publisher": "danieltodor",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/danieltodor/vscode-search-todos"
+    },
+    "engines": {
+        "vscode": "^1.109.0"
+    },
+    "categories": [
+        "Visualization",
+        "Other"
+    ],
+    "activationEvents": [
+        "onStartupFinished"
+    ],
+    "main": "./dist/extension.js",
+    "contributes": {
+        "configuration": {
+            "title": "Search TODOs",
             "properties": {
-              "keyword": {
-                "type": "string",
-                "description": "The keyword to search for (e.g. TODO, FIXME)."
-              },
-              "severity": {
-                "type": "string",
-                "enum": [
-                  "error",
-                  "warning",
-                  "info",
-                  "hint"
-                ],
-                "description": "The diagnostic severity for this keyword."
-              }
-            },
-            "required": [
-              "keyword",
-              "severity"
-            ]
-          },
-          "default": [
-            { "keyword": "FIXME", "severity": "error" },
-            { "keyword": "BUG", "severity": "error" },
-            { "keyword": "TODO", "severity": "warning" },
-            { "keyword": "HACK", "severity": "warning" },
-            { "keyword": "XXX", "severity": "warning" }
-          ],
-          "description": "List of keywords to scan for and their diagnostic severities."
-        },
-        "searchTodos.include": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": ["**/*"],
-          "description": "Glob patterns for files to include when scanning."
-        },
-        "searchTodos.exclude": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [
-            "**/.git/**",
-            "**/.vscode/**",
-            "**/node_modules/**",
-            "**/build/**",
-            "**/dist/**",
-            "**/out/**"
-          ],
-          "description": "Glob patterns for files to exclude when scanning."
-        },
-        "searchTodos.caseSensitive": {
-          "type": "boolean",
-          "default": true,
-          "description": "Whether keyword matching is case-sensitive. When true, only exact case matches (e.g. TODO, not todo) are detected."
+                "searchTodos.keywords": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "keyword": {
+                                "type": "string",
+                                "description": "The keyword to search for (e.g. TODO, FIXME)."
+                            },
+                            "severity": {
+                                "type": "string",
+                                "enum": [
+                                    "error",
+                                    "warning",
+                                    "info",
+                                    "hint"
+                                ],
+                                "description": "The diagnostic severity for this keyword."
+                            }
+                        },
+                        "required": [
+                            "keyword",
+                            "severity"
+                        ]
+                    },
+                    "default": [
+                        {
+                            "keyword": "FIXME",
+                            "severity": "error"
+                        },
+                        {
+                            "keyword": "BUG",
+                            "severity": "error"
+                        },
+                        {
+                            "keyword": "TODO",
+                            "severity": "warning"
+                        },
+                        {
+                            "keyword": "HACK",
+                            "severity": "warning"
+                        },
+                        {
+                            "keyword": "XXX",
+                            "severity": "warning"
+                        },
+                        {
+                            "keyword": "NOTE",
+                            "severity": "info"
+                        },
+                        {
+                            "keyword": "REVIEW",
+                            "severity": "hint"
+                        }
+                    ],
+                    "description": "List of keywords to scan for and their diagnostic severities."
+                },
+                "searchTodos.include": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [
+                        "**/*"
+                    ],
+                    "description": "Glob patterns for files to include when scanning."
+                },
+                "searchTodos.exclude": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [
+                        "**/.git/**",
+                        "**/.vscode/**",
+                        "**/node_modules/**",
+                        "**/build/**",
+                        "**/dist/**",
+                        "**/out/**"
+                    ],
+                    "description": "Glob patterns for files to exclude when scanning."
+                },
+                "searchTodos.caseSensitive": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Whether keyword matching is case-sensitive. When true, only exact case matches (e.g. TODO, not todo) are detected."
+                }
+            }
         }
-      }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run package",
+        "compile": "npm run check-types && npm run lint && node esbuild.js",
+        "watch": "npm-run-all -p watch:*",
+        "watch:esbuild": "node esbuild.js --watch",
+        "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+        "package": "npm run check-types && npm run lint && node esbuild.js --production",
+        "compile-tests": "tsc -p . --outDir out",
+        "watch-tests": "tsc -p . -w --outDir out",
+        "pretest": "npm run compile-tests && npm run compile && npm run lint",
+        "check-types": "tsc --noEmit",
+        "lint": "eslint src",
+        "test": "vscode-test"
+    },
+    "devDependencies": {
+        "@types/vscode": "^1.109.0",
+        "@types/mocha": "^10.0.10",
+        "@types/node": "22.x",
+        "typescript-eslint": "^8.54.0",
+        "eslint": "^9.39.2",
+        "esbuild": "^0.27.2",
+        "npm-run-all": "^4.1.5",
+        "typescript": "^5.9.3",
+        "@vscode/test-cli": "^0.0.12",
+        "@vscode/test-electron": "^2.5.2"
     }
-  },
-  "scripts": {
-    "vscode:prepublish": "npm run package",
-    "compile": "npm run check-types && npm run lint && node esbuild.js",
-    "watch": "npm-run-all -p watch:*",
-    "watch:esbuild": "node esbuild.js --watch",
-    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "npm run check-types && npm run lint && node esbuild.js --production",
-    "compile-tests": "tsc -p . --outDir out",
-    "watch-tests": "tsc -p . -w --outDir out",
-    "pretest": "npm run compile-tests && npm run compile && npm run lint",
-    "check-types": "tsc --noEmit",
-    "lint": "eslint src",
-    "test": "vscode-test"
-  },
-  "devDependencies": {
-    "@types/vscode": "^1.109.0",
-    "@types/mocha": "^10.0.10",
-    "@types/node": "22.x",
-    "typescript-eslint": "^8.54.0",
-    "eslint": "^9.39.2",
-    "esbuild": "^0.27.2",
-    "npm-run-all": "^4.1.5",
-    "typescript": "^5.9.3",
-    "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2"
-  }
 }
