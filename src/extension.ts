@@ -45,6 +45,31 @@ export function activate(context: vscode.ExtensionContext)
         })
     );
 
+    // Handle file creates, deletes, and renames
+    const watcher = vscode.workspace.createFileSystemWatcher("**/*");
+
+    watcher.onDidDelete((uri) =>
+    {
+        diagnosticCollection.delete(uri);
+        inScopeUris.delete(uri.toString());
+    });
+
+    watcher.onDidCreate(async (uri) =>
+    {
+        try
+        {
+            const document = await vscode.workspace.openTextDocument(uri);
+            inScopeUris.add(uri.toString());
+            const diagnostics = scanDocument(document, config);
+            diagnosticCollection.set(uri, diagnostics);
+        } catch
+        {
+            // Skip files that can't be opened (binary, etc.)
+        }
+    });
+
+    context.subscriptions.push(watcher);
+
     // Re-scan the whole workspace when configuration changes
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration((e) =>
