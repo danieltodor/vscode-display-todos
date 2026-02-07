@@ -102,22 +102,9 @@ export function scanDocument(
 export function readConfig(displayName: string): ScanConfig {
   const cfg = vscode.workspace.getConfiguration("searchTodos");
   return {
-    keywords: cfg.get<KeywordConfig[]>("keywords", [
-      { keyword: "FIXME", severity: "error" },
-      { keyword: "BUG", severity: "error" },
-      { keyword: "TODO", severity: "warning" },
-      { keyword: "HACK", severity: "warning" },
-      { keyword: "XXX", severity: "warning" },
-    ]),
-    include: cfg.get<string[]>("include", ["**/*"]),
-    exclude: cfg.get<string[]>("exclude", [
-      "**/.git/**",
-      "**/.vscode/**",
-      "**/node_modules/**",
-      "**/build/**",
-      "**/dist/**",
-      "**/out/**"
-    ]),
+    keywords: cfg.get<KeywordConfig[]>("keywords", []),
+    include: cfg.get<string[]>("include", []),
+    exclude: cfg.get<string[]>("exclude", []),
     caseSensitive: cfg.get<boolean>("caseSensitive", true),
     displayName,
   };
@@ -147,8 +134,8 @@ export async function scanWorkspace(
 ): Promise<void> {
   diagnosticCollection.clear();
 
-  const includeGlob = toGlob(config.include) || "**/*";
-  const excludeGlob = toGlob(config.exclude) || undefined;
+  const includeGlob = toGlob(config.include);
+  const excludeGlob = toGlob(config.exclude);
   const uris = await vscode.workspace.findFiles(includeGlob, excludeGlob);
 
   for (const uri of uris) {
