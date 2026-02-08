@@ -1,14 +1,14 @@
 {
-    "name": "search-todos",
-    "displayName": "Search TODOs",
+    "name": "display-todos",
+    "displayName": "Display TODOs",
     "description": "Scans your workspace for TODO, FIXME, HACK, etc comments and displays them in the problems panel.",
     "icon": "./media/icon.png",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "preview": false,
     "publisher": "danieltodor",
     "repository": {
         "type": "git",
-        "url": "https://github.com/danieltodor/vscode-search-todos"
+        "url": "https://github.com/danieltodor/vscode-display-todos"
     },
     "engines": {
         "vscode": "^1.109.0"
@@ -23,9 +23,9 @@
     "main": "./dist/extension.js",
     "contributes": {
         "configuration": {
-            "title": "Search TODOs",
+            "title": "Display TODOs",
             "properties": {
-                "searchTodos.keywords": {
+                "displayTodos.keywords": {
                     "type": "array",
                     "items": {
                         "type": "object",
@@ -82,7 +82,7 @@
                     ],
                     "description": "List of keywords to scan for and their diagnostic severities."
                 },
-                "searchTodos.include": {
+                "displayTodos.include": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -92,7 +92,7 @@
                     ],
                     "description": "Glob patterns for files to include when scanning."
                 },
-                "searchTodos.exclude": {
+                "displayTodos.exclude": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -107,16 +107,21 @@
                     ],
                     "description": "Glob patterns for files to exclude when scanning."
                 },
-                "searchTodos.caseSensitive": {
+                "displayTodos.pattern": {
+                    "type": "string",
+                    "default": "\\b({keywords})\\b[:\\s]+(.+)",
+                    "description": "Regex pattern used to match keywords. Use {keywords} as a placeholder for the joined keyword alternatives. Must contain two capture groups: group 1 for the matched keyword and group 2 for the trailing text."
+                },
+                "displayTodos.caseSensitive": {
                     "type": "boolean",
                     "default": true,
                     "description": "Whether keyword matching is case-sensitive. When true, only exact case matches (e.g. TODO, not todo) are detected."
                 },
-                "searchTodos.enable": {
+                "displayTodos.enable": {
                     "type": "boolean",
                     "default": true,
                     "scope": "language-overridable",
-                    "description": "Enable or disable scanning for TODO comments. When false, all diagnostics are cleared and no scanning occurs. Can be overridden per language (e.g. \"[python]\": { \"searchTodos.enable\": false })."
+                    "description": "Enable or disable scanning for TODO comments. When false, all diagnostics are cleared and no scanning occurs. Can be overridden per language (e.g. \"[python]\": { \"displayTodos.enable\": false })."
                 }
             }
         }
@@ -136,15 +141,15 @@
         "test": "vscode-test"
     },
     "devDependencies": {
-        "@types/vscode": "^1.109.0",
-        "@types/mocha": "^10.0.10",
-        "@types/node": "22.x",
-        "typescript-eslint": "^8.54.0",
-        "eslint": "^9.39.2",
-        "esbuild": "^0.27.2",
-        "npm-run-all": "^4.1.5",
-        "typescript": "^5.9.3",
-        "@vscode/test-cli": "^0.0.12",
-        "@vscode/test-electron": "^2.5.2"
+        "@types/vscode": "1.109.0",
+        "@types/mocha": "10.0.10",
+        "@types/node": "25.2.2",
+        "typescript-eslint": "8.54.0",
+        "eslint": "9.39.2",
+        "esbuild": "0.27.2",
+        "npm-run-all": "4.1.5",
+        "typescript": "5.9.3",
+        "@vscode/test-cli": "0.0.12",
+        "@vscode/test-electron": "2.5.2"
     }
 }

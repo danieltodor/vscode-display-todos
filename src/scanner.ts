@@ -1,5 +1,7 @@
 import * as vscode from "vscode";
 
+export const CONFIG_SECTION = "displayTodos";
+
 export interface KeywordConfig
 {
     keyword: string;
@@ -11,6 +13,7 @@ export interface ScanConfig
     keywords: KeywordConfig[];
     include: string[];
     exclude: string[];
+    pattern: string;
     caseSensitive: boolean;
     displayName: string;
 }
@@ -45,16 +48,17 @@ function buildSeverityLookup(
 
 /**
  * Build a regex that matches any of the configured keywords.
- * Captures: group 1 = keyword, group 2 = optional trailing text after `:` or whitespace.
+ * Uses the user-configured pattern, replacing `{keywords}` with the joined keyword alternatives.
+ * The pattern must contain two capture groups: group 1 = keyword, group 2 = trailing text.
  */
-function buildPattern(keywords: KeywordConfig[], caseSensitive: boolean): RegExp
+function buildPattern(keywords: KeywordConfig[], pattern: string, caseSensitive: boolean): RegExp
 {
     const escaped = keywords.map((kw) =>
         kw.keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
     );
     const flags = caseSensitive ? "" : "i";
-    // Match keyword at a word boundary, optionally followed by : and/or whitespace, then trailing text
-    return new RegExp(`\\b(${escaped.join("|")})\\b[:\\s]?(.*)`, flags);
+    const source = pattern.replace("{keywords}", escaped.join("|"));
+    return new RegExp(source, flags);
 }
 
 /**
@@ -63,7 +67,7 @@ function buildPattern(keywords: KeywordConfig[], caseSensitive: boolean): RegExp
  */
 export function isEnabledFor(document: vscode.TextDocument): boolean
 {
-    const cfg = vscode.workspace.getConfiguration("searchTodos", document);
+    const cfg = vscode.workspace.getConfiguration(CONFIG_SECTION, document);
     return cfg.get<boolean>("enable", true);
 }
 
@@ -80,7 +84,7 @@ export function scanDocument(
         return [];
     }
 
-    const pattern = buildPattern(config.keywords, config.caseSensitive);
+    const pattern = buildPattern(config.keywords, config.pattern, config.caseSensitive);
     const severityLookup = buildSeverityLookup(config.keywords, config.caseSensitive);
     const diagnostics: vscode.Diagnostic[] = [];
 
@@ -120,11 +124,12 @@ export function scanDocument(
  */
 export function readConfig(displayName: string): ScanConfig
 {
-    const cfg = vscode.workspace.getConfiguration("searchTodos");
+    const cfg = vscode.workspace.getConfiguration(CONFIG_SECTION);
     return {
         keywords: cfg.get<KeywordConfig[]>("keywords", []),
         include: cfg.get<string[]>("include", []),
         exclude: cfg.get<string[]>("exclude", []),
+        pattern: cfg.get<string>("pattern", ""),
         caseSensitive: cfg.get<boolean>("caseSensitive", true),
         displayName
     };
@@ -161,7 +166,7 @@ export async function scanWorkspace(
     inScopeUris.clear();
 
     const globalEnable = vscode.workspace
-        .getConfiguration("searchTodos")
+        .getConfiguration(CONFIG_SECTION)
         .get<boolean>("enable", true);
     if (!globalEnable)
     {

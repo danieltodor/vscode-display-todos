@@ -30,8 +30,9 @@ comments, and displays them in the `problems` panel.
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `searchTodos.keywords` | `array` | See above | Array of `{ "keyword": string, "severity": "error" \| "warning" \| "info" \| "hint" }` objects defining which keywords to scan for and their diagnostic severity. |
-| `searchTodos.include` | `string[]` | `["**/*"]` | Glob patterns for files to include when scanning. |
-| `searchTodos.exclude` | `string[]` | `["**/.git/**", "**/.vscode/**", "**/node_modules/**", "**/build/**", "**/dist/**", "**/out/**"]` | Glob patterns for files to exclude when scanning. |
-| `searchTodos.caseSensitive` | `boolean` | `true` | Whether keyword matching is case-sensitive. When `true`, only exact-case matches are detected. |
-| `searchTodos.enable` | `boolean` | `true` | Enable or disable scanning for TODO comments. When false, all diagnostics are cleared and no scanning occurs. Can be overridden per language (e.g. \"[python]\": { \"searchTodos.enable\": false }). |
+| `displayTodos.keywords` | `array` | See above | List of keywords to scan for and their diagnostic severities. |
+| `displayTodos.include` | `string[]` | `["**/*"]` | Glob patterns for files to include when scanning. |
+| `displayTodos.exclude` | `string[]` | `["**/.git/**", "**/.vscode/**", "**/node_modules/**", "**/build/**", "**/dist/**", "**/out/**"]` | Glob patterns for files to exclude when scanning. |
+| `displayTodos.pattern` | `string` | `\\b({keywords})\\b[:\\s]+(.+)` | Regex pattern used to match keywords. Use {keywords} as a placeholder for the joined keyword alternatives. Must contain two capture groups: group 1 for the matched keyword and group 2 for the trailing text. |
+| `displayTodos.caseSensitive` | `boolean` | `true` | Whether keyword matching is case-sensitive. When true, only exact case matches (e.g. TODO, not todo) are detected. |
+| `displayTodos.enable` | `boolean` | `true` | Enable or disable scanning for TODO comments. When false, all diagnostics are cleared and no scanning occurs. Can be overridden per language (e.g. \"[python]\": { \"displayTodos.enable\": false }). |

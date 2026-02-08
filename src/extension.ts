@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { readConfig, scanDocument, scanWorkspace, toGlob, ScanConfig, getFileUris } from "./scanner";
+import { readConfig, scanDocument, scanWorkspace, toGlob, ScanConfig, getFileUris, CONFIG_SECTION } from "./scanner";
 
 export function activate(context: vscode.ExtensionContext)
 {
@@ -7,14 +7,24 @@ export function activate(context: vscode.ExtensionContext)
         context.extension.packageJSON.displayName;
 
     const diagnosticCollection =
-        vscode.languages.createDiagnosticCollection("searchTodos");
+        vscode.languages.createDiagnosticCollection(CONFIG_SECTION);
     context.subscriptions.push(diagnosticCollection);
 
     let config = readConfig(displayName);
     const inScopeUris = new Set<string>();
 
-    // Initial full workspace scan
-    scanWorkspace(diagnosticCollection, config, inScopeUris);
+    // Initial full workspace scan, then scan any already-open editors
+    scanWorkspace(diagnosticCollection, config, inScopeUris).then(() =>
+    {
+        for (const document of vscode.workspace.textDocuments)
+        {
+            if (!inScopeUris.has(document.uri.toString()))
+            {
+                const diagnostics = scanDocument(document, config);
+                diagnosticCollection.set(document.uri, diagnostics);
+            }
+        }
+    });
 
     // Re-scan a single file on save
     context.subscriptions.push(
@@ -87,7 +97,7 @@ export function activate(context: vscode.ExtensionContext)
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration((e) =>
         {
-            if (e.affectsConfiguration("searchTodos"))
+            if (e.affectsConfiguration(CONFIG_SECTION))
             {
                 config = readConfig(displayName);
                 scanWorkspace(diagnosticCollection, config, inScopeUris);

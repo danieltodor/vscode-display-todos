@@ -12,8 +12,9 @@ const DEFAULT_CONFIG: ScanConfig = {
     ],
     include: ["**/*"],
     exclude: ["**/node_modules/**"],
+    pattern: "\\b({keywords})\\b[:\\s]+(.+)",
     caseSensitive: true,
-    displayName: "Search TODOs"
+    displayName: "Display TODOs"
 };
 
 /**
@@ -36,7 +37,7 @@ suite("Scanner — scanDocument", () =>
             diagnostics[0].severity,
             vscode.DiagnosticSeverity.Warning
         );
-        assert.strictEqual(diagnostics[0].source, "Search TODOs");
+        assert.strictEqual(diagnostics[0].source, "Display TODOs");
     });
 
     test("detects a FIXME comment as error", async () =>
