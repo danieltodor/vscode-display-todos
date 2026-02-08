@@ -1,35 +1,33 @@
 import * as vscode from "vscode";
-import { readConfig, scanDocument, scanWorkspace, toGlob, ScanConfig, getFileUris, CONFIG_SECTION } from "./scanner";
+import { readConfig, scanDocument, scanWorkspace, ScanConfig, getFileUris, CONFIG_SECTION } from "./scanner";
 
 export function activate(context: vscode.ExtensionContext)
 {
-    const displayName: string =
-        context.extension.packageJSON.displayName;
+    const displayName: string = context.extension.packageJSON.displayName;
 
-    const diagnosticCollection =
-        vscode.languages.createDiagnosticCollection(CONFIG_SECTION);
+    const diagnosticCollection = vscode.languages.createDiagnosticCollection(CONFIG_SECTION);
     context.subscriptions.push(diagnosticCollection);
 
     let config = readConfig(displayName);
     const inScopeUris = new Set<string>();
+    const recentlySavedUris = new Set<string>();
 
-    // Initial full workspace scan, then scan any already-open editors
-    scanWorkspace(diagnosticCollection, config, inScopeUris).then(() =>
-    {
-        for (const document of vscode.workspace.textDocuments)
-        {
-            if (!inScopeUris.has(document.uri.toString()))
-            {
-                const diagnostics = scanDocument(document, config);
-                diagnosticCollection.set(document.uri, diagnostics);
-            }
-        }
-    });
+    // Initial full workspace scan
+    scanWorkspace(diagnosticCollection, config, inScopeUris);
 
     // Re-scan a single file on save
     context.subscriptions.push(
         vscode.workspace.onDidSaveTextDocument((document) =>
         {
+            if (document.uri.scheme !== "file")
+            {
+                return;
+            }
+
+            const key = document.uri.toString();
+            recentlySavedUris.add(key);
+            setTimeout(() => recentlySavedUris.delete(key), 1000);
+
             const diagnostics = scanDocument(document, config);
             diagnosticCollection.set(document.uri, diagnostics);
         })
@@ -39,6 +37,11 @@ export function activate(context: vscode.ExtensionContext)
     context.subscriptions.push(
         vscode.workspace.onDidOpenTextDocument((document) =>
         {
+            if (document.uri.scheme !== "file")
+            {
+                return;
+            }
+
             const diagnostics = scanDocument(document, config);
             diagnosticCollection.set(document.uri, diagnostics);
         })
@@ -48,6 +51,11 @@ export function activate(context: vscode.ExtensionContext)
     context.subscriptions.push(
         vscode.workspace.onDidCloseTextDocument((document) =>
         {
+            if (document.uri.scheme !== "file")
+            {
+                return;
+            }
+
             if (!inScopeUris.has(document.uri.toString()))
             {
                 diagnosticCollection.delete(document.uri);
@@ -83,6 +91,24 @@ export function activate(context: vscode.ExtensionContext)
             }
             const document = await vscode.workspace.openTextDocument(uri);
             inScopeUris.add(uri.toString());
+            const diagnostics = scanDocument(document, config);
+            diagnosticCollection.set(uri, diagnostics);
+        } catch
+        {
+            // Skip files that can't be opened (binary, etc.)
+        }
+    });
+
+    watcher.onDidChange(async (uri) =>
+    {
+        try
+        {
+            const key = uri.toString();
+            if (recentlySavedUris.has(key) || !inScopeUris.has(key))
+            {
+                return;
+            }
+            const document = await vscode.workspace.openTextDocument(uri);
             const diagnostics = scanDocument(document, config);
             diagnosticCollection.set(uri, diagnostics);
         } catch

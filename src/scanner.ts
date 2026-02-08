@@ -29,10 +29,7 @@ const SEVERITY_MAP: Record<string, vscode.DiagnosticSeverity> = {
  * Build a lookup from keyword to its configured severity.
  * Keys are stored uppercase when case-insensitive, or as-is when case-sensitive.
  */
-function buildSeverityLookup(
-    keywords: KeywordConfig[],
-    caseSensitive: boolean
-): Map<string, vscode.DiagnosticSeverity>
+function buildSeverityLookup(keywords: KeywordConfig[], caseSensitive: boolean): Map<string, vscode.DiagnosticSeverity>
 {
     const map = new Map<string, vscode.DiagnosticSeverity>();
     for (const kw of keywords)
@@ -74,10 +71,7 @@ export function isEnabledFor(document: vscode.TextDocument): boolean
 /**
  * Scan a single document for TODO-style comments and return diagnostics.
  */
-export function scanDocument(
-    document: vscode.TextDocument,
-    config: ScanConfig
-): vscode.Diagnostic[]
+export function scanDocument(document: vscode.TextDocument, config: ScanConfig): vscode.Diagnostic[]
 {
     if (!isEnabledFor(document) || config.keywords.length === 0)
     {
@@ -156,11 +150,7 @@ export function toGlob(patterns: string[]): string
 /**
  * Scan every matching file in the workspace and populate the DiagnosticCollection.
  */
-export async function scanWorkspace(
-    diagnosticCollection: vscode.DiagnosticCollection,
-    config: ScanConfig,
-    inScopeUris: Set<string>
-): Promise<void>
+export async function scanWorkspace(diagnosticCollection: vscode.DiagnosticCollection, config: ScanConfig, inScopeUris: Set<string>): Promise<void>
 {
     diagnosticCollection.clear();
     inScopeUris.clear();
@@ -173,9 +163,8 @@ export async function scanWorkspace(
         return;
     }
 
-    const uris = await getFileUris(config);
-
-    for (const uri of uris)
+    // Scan all files in workspace
+    for (const uri of await getFileUris(config))
     {
         inScopeUris.add(uri.toString());
         try
@@ -191,12 +180,21 @@ export async function scanWorkspace(
             // Skip files that can't be opened (binary, too large, etc.)
         }
     }
+
+    // Scan opened editors that weren't scanned in the previous step
+    for (const document of vscode.workspace.textDocuments)
+    {
+        if (!inScopeUris.has(document.uri.toString()))
+        {
+            const diagnostics = scanDocument(document, config);
+            diagnosticCollection.set(document.uri, diagnostics);
+        }
+    }
 }
 
 export async function getFileUris(config: ScanConfig)
 {
     const includeGlob = toGlob(config.include);
     const excludeGlob = toGlob(config.exclude);
-    const uris = await vscode.workspace.findFiles(includeGlob, excludeGlob);
-    return uris;
+    return await vscode.workspace.findFiles(includeGlob, excludeGlob);
 }

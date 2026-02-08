@@ -1,3 +1,8 @@
+## [0.0.3] - 2026-02-08
+### Changed
+- Rescan opened editors on config change
+- Rescan when file is changed by external source
+
 ## [0.0.2] - 2026-02-08
 ### Added
 - Regex pattern can be configured
