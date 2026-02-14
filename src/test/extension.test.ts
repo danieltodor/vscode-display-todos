@@ -1,6 +1,20 @@
 import * as assert from "assert";
+import * as fs from "node:fs/promises";
+import * as os from "node:os";
+import * as path from "node:path";
 import * as vscode from "vscode";
-import { isPathInScope, matchesScope, scanDocument, ScanConfig, toGlob } from "../scanner";
+import
+{
+    compileConfig,
+    getFileUris,
+    isPathInScope,
+    matchesScope,
+    scanDocument,
+    scanText,
+    scanWorkspace,
+    ScanConfig,
+    toGlob,
+} from "../scanner";
 
 const DEFAULT_CONFIG: ScanConfig = {
     keywords: [
@@ -17,12 +31,116 @@ const DEFAULT_CONFIG: ScanConfig = {
     displayName: "Display TODOs"
 };
 
+const TEST_ROOT_DIR = ".tmp-display-todos-tests";
+
+let provisionedWorkspaceRoot: vscode.Uri | undefined;
+let provisionedWorkspaceFolderName: string | undefined;
+
 /**
  * Helper: create a TextDocument-like object from raw text content.
  */
 async function docFromText(content: string): Promise<vscode.TextDocument>
 {
     return vscode.workspace.openTextDocument({ content, language: "plaintext" });
+}
+
+async function ensureWorkspaceRoot(): Promise<vscode.Uri>
+{
+    const root = vscode.workspace.workspaceFolders?.[0]?.uri;
+    if (root)
+    {
+        return root;
+    }
+
+    if (provisionedWorkspaceRoot)
+    {
+        return provisionedWorkspaceRoot;
+    }
+
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "display-todos-tests-"));
+    const tempUri = vscode.Uri.file(tempDir);
+    const folderName = `display-todos-tests-${Date.now()}`;
+
+    const added = vscode.workspace.updateWorkspaceFolders(
+        0,
+        0,
+        { uri: tempUri, name: folderName }
+    );
+    if (!added)
+    {
+        throw new Error("Could not add temporary workspace folder for tests.");
+    }
+
+    const deadline = Date.now() + 5000;
+    while (Date.now() < deadline)
+    {
+        const folder = vscode.workspace.workspaceFolders?.find((w) => w.uri.toString() === tempUri.toString());
+        if (folder)
+        {
+            provisionedWorkspaceRoot = folder.uri;
+            provisionedWorkspaceFolderName = folder.name;
+            return folder.uri;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+
+    throw new Error("Temporary workspace folder did not become available in time.");
+}
+
+async function testFileUri(relativePath: string): Promise<vscode.Uri>
+{
+    const root = await ensureWorkspaceRoot();
+    return vscode.Uri.joinPath(root, TEST_ROOT_DIR, relativePath);
+}
+
+async function writeTestFile(relativePath: string, content: string): Promise<vscode.Uri>
+{
+    const uri = await testFileUri(relativePath);
+    const encoder = new TextEncoder();
+    await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(uri, ".."));
+    await vscode.workspace.fs.writeFile(uri, encoder.encode(content));
+    return uri;
+}
+
+async function cleanupTestFiles(): Promise<void>
+{
+    try
+    {
+        const root = await ensureWorkspaceRoot();
+        await vscode.workspace.fs.delete(vscode.Uri.joinPath(root, TEST_ROOT_DIR), { recursive: true, useTrash: false });
+    } catch
+    {
+        // Directory may not exist.
+    }
+}
+
+async function cleanupProvisionedWorkspace(): Promise<void>
+{
+    if (!provisionedWorkspaceRoot)
+    {
+        return;
+    }
+
+    try
+    {
+        await vscode.workspace.fs.delete(provisionedWorkspaceRoot, { recursive: true, useTrash: false });
+    } catch
+    {
+        // Best-effort cleanup.
+    }
+
+    const index = vscode.workspace.workspaceFolders?.findIndex((folder) =>
+        folder.uri.toString() === provisionedWorkspaceRoot?.toString()
+        || folder.name === provisionedWorkspaceFolderName
+    ) ?? -1;
+
+    if (index >= 0)
+    {
+        vscode.workspace.updateWorkspaceFolders(index, 1);
+    }
+
+    provisionedWorkspaceRoot = undefined;
+    provisionedWorkspaceFolderName = undefined;
 }
 
 suite("Scanner — scanDocument", () =>
@@ -151,6 +269,62 @@ suite("Scanner — scanDocument", () =>
         // "TODO: indented" starts at column 7
         assert.strictEqual(diagnostics[0].range.start.character, 7);
     });
+
+    test("range end excludes trailing spaces", async () =>
+    {
+        const doc = await docFromText("// TODO: trim me    ");
+        const diagnostics = scanDocument(doc, DEFAULT_CONFIG);
+        assert.strictEqual(diagnostics.length, 1);
+        const diag = diagnostics[0];
+        assert.strictEqual(diag.range.start.character, 3);
+        assert.strictEqual(diag.range.end.character, "// TODO: trim me".length);
+    });
+
+    test("matches only the first keyword occurrence per line", async () =>
+    {
+        const doc = await docFromText("// TODO: first TODO: second");
+        const diagnostics = scanDocument(doc, DEFAULT_CONFIG);
+        assert.strictEqual(diagnostics.length, 1);
+        assert.strictEqual(diagnostics[0].message, "TODO: first TODO: second");
+    });
+
+    test("falls back to warning severity for unknown runtime severity", async () =>
+    {
+        const doc = await docFromText("// ODD: custom severity");
+        const customConfig: ScanConfig = {
+            ...DEFAULT_CONFIG,
+            keywords: [{ keyword: "ODD", severity: "warning" }],
+        };
+
+        (customConfig.keywords[0] as { keyword: string; severity: string; }).severity = "critical";
+
+        const diagnostics = scanDocument(doc, customConfig);
+        assert.strictEqual(diagnostics.length, 1);
+        assert.strictEqual(diagnostics[0].severity, vscode.DiagnosticSeverity.Warning);
+    });
+});
+
+suite("Scanner — compile + text scanning", () =>
+{
+    test("compileConfig with empty keywords creates never-matching pattern", () =>
+    {
+        const compiled = compileConfig({ ...DEFAULT_CONFIG, keywords: [] });
+        const diagnostics = scanText("// TODO: should not match", compiled);
+        assert.strictEqual(diagnostics.length, 0);
+    });
+
+    test("scanText respects case-insensitive matching and preserves configured source", () =>
+    {
+        const compiled = compileConfig({
+            ...DEFAULT_CONFIG,
+            caseSensitive: false,
+            displayName: "Custom Source",
+        });
+        const diagnostics = scanText("# todo: lower-case", compiled);
+        assert.strictEqual(diagnostics.length, 1);
+        assert.strictEqual(diagnostics[0].message, "TODO: lower-case");
+        assert.strictEqual(diagnostics[0].source, "Custom Source");
+    });
 });
 
 suite("Scanner — scope and globs", () =>
@@ -186,5 +360,148 @@ suite("Scanner — scope and globs", () =>
     test("matchesScope rejects non-file URIs", () =>
     {
         assert.strictEqual(matchesScope(vscode.Uri.parse("untitled:test"), DEFAULT_CONFIG), false);
+    });
+
+    test("isPathInScope includes dotfiles with dot=true matching", () =>
+    {
+        assert.strictEqual(isPathInScope(".github/workflows/ci.yml", ["**/*"], []), true);
+    });
+
+    test("toGlob handles empty, single and multi pattern inputs", () =>
+    {
+        assert.strictEqual(toGlob([]), "");
+        assert.strictEqual(toGlob(["src/**/*.ts"]), "src/**/*.ts");
+        assert.strictEqual(toGlob([" src/**/*.ts ", "", "**/*.md"]), "{src/**/*.ts,**/*.md}");
+    });
+});
+
+suite("Scanner — workspace scan", () =>
+{
+    let collection: vscode.DiagnosticCollection;
+    let inScopeUris: Set<string>;
+
+    suiteSetup(async () =>
+    {
+        await ensureWorkspaceRoot();
+        await cleanupTestFiles();
+    });
+
+    suiteTeardown(async () =>
+    {
+        await cleanupTestFiles();
+        await cleanupProvisionedWorkspace();
+    });
+
+    setup(async () =>
+    {
+        collection = vscode.languages.createDiagnosticCollection("display-todos-tests");
+        inScopeUris = new Set<string>();
+        await cleanupTestFiles();
+    });
+
+    teardown(async () =>
+    {
+        collection.dispose();
+        await cleanupTestFiles();
+    });
+
+    test("getFileUris returns files constrained by include and exclude globs", async () =>
+    {
+        const included = await writeTestFile("glob/include.ts", "// TODO: include");
+        await writeTestFile("glob/excluded.ignore", "// TODO: excluded");
+
+        const uris = await getFileUris({
+            ...DEFAULT_CONFIG,
+            include: [`${TEST_ROOT_DIR}/glob/**/*`],
+            exclude: [`${TEST_ROOT_DIR}/glob/**/*.ignore`],
+        });
+
+        const asStrings = uris.map((u) => u.toString());
+        assert.ok(asStrings.includes(included.toString()));
+        assert.ok(!asStrings.some((u) => u.endsWith("excluded.ignore")));
+    });
+
+    test("scanWorkspace scans included files and tracks in-scope URIs", async () =>
+    {
+        const todoUri = await writeTestFile("scan/one.ts", "// TODO: alpha");
+        const noTodoUri = await writeTestFile("scan/two.ts", "const x = 1;");
+
+        await scanWorkspace(
+            collection,
+            {
+                ...DEFAULT_CONFIG,
+                include: [`${TEST_ROOT_DIR}/scan/**/*.ts`],
+                exclude: [],
+            },
+            inScopeUris
+        );
+
+        assert.ok(inScopeUris.has(todoUri.toString()));
+        assert.ok(inScopeUris.has(noTodoUri.toString()));
+
+        const todoDiagnostics = collection.get(todoUri) ?? [];
+        assert.strictEqual(todoDiagnostics.length, 1);
+        assert.strictEqual(todoDiagnostics[0].message, "TODO: alpha");
+
+        const noTodoDiagnostics = collection.get(noTodoUri) ?? [];
+        assert.strictEqual(noTodoDiagnostics.length, 0);
+    });
+
+    test("scanWorkspace prefers open unsaved document content over disk content", async () =>
+    {
+        const uri = await writeTestFile("scan/unsaved.ts", "const value = 1;\n");
+        const document = await vscode.workspace.openTextDocument(uri);
+        await vscode.window.showTextDocument(document);
+
+        const edit = new vscode.WorkspaceEdit();
+        const end = document.positionAt(document.getText().length);
+        edit.insert(uri, end, "// TODO: from unsaved buffer\n");
+        const applied = await vscode.workspace.applyEdit(edit);
+        assert.strictEqual(applied, true);
+
+        await scanWorkspace(
+            collection,
+            {
+                ...DEFAULT_CONFIG,
+                include: [`${TEST_ROOT_DIR}/scan/**/*.ts`],
+                exclude: [],
+            },
+            inScopeUris
+        );
+
+        const diagnostics = collection.get(uri) ?? [];
+        assert.strictEqual(diagnostics.length, 1);
+        assert.strictEqual(diagnostics[0].message, "TODO: from unsaved buffer");
+    });
+
+    test("scanWorkspace with pre-cancelled token returns after clearing state", async () =>
+    {
+        await writeTestFile("scan/cancelled.ts", "// TODO: should not be scanned\n");
+
+        collection.set(vscode.Uri.parse("file:///stale"), [
+            new vscode.Diagnostic(
+                new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 1)),
+                "stale",
+                vscode.DiagnosticSeverity.Warning
+            )
+        ]);
+        inScopeUris.add("file:///stale");
+
+        const cts = new vscode.CancellationTokenSource();
+        cts.cancel();
+
+        await scanWorkspace(
+            collection,
+            {
+                ...DEFAULT_CONFIG,
+                include: [`${TEST_ROOT_DIR}/scan/**/*.ts`],
+                exclude: [],
+            },
+            inScopeUris,
+            cts.token
+        );
+
+        assert.strictEqual(collection.get(vscode.Uri.parse("file:///stale"))?.length ?? 0, 0);
+        assert.strictEqual(inScopeUris.size, 0);
     });
 });
