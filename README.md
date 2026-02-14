@@ -1,18 +1,15 @@
 ## Overview
 
 This extension will scan your workspace and opened files for **FIXME**, **BUG**, **TODO**, **HACK**, **XXX**, **NOTE**, **REVIEW**
-comments, and displays them in the `problems` panel.
+comments, and displays them in the ****PROBLEMS**** panel.
 
 ![Example](media/example.png)
 
 ## Features
 
-- **Full workspace scan on startup** — automatically scans every file in the workspace, and reports all matches in the problems panel.
-- **Re-scan on save** — when you save a file, it is immediately re-scanned and its diagnostics are updated.
-- **Re-scan on open** — when you open a file in the editor, it is re-scanned so new changes are picked up right away.
-- **Configurable keywords & severity** — define your own keywords and assign each one a diagnostic severity (`error`, `warning`, `info`, `hint`).
-- **Case-sensitive by default** — only exact-case matches are detected (e.g. `TODO` but not `todo`). Can be toggled to case-insensitive via settings.
-- **Include / exclude glob patterns** — control which files are scanned using glob patterns.
+- Define your own keywords.
+- Change the regex pattern used for matching the keywords.
+- Exclude directories from scanning.
 
 ## Default Keywords & Severities
 
@@ -23,8 +20,8 @@ comments, and displays them in the `problems` panel.
 | TODO | Warning |
 | HACK | Warning |
 | XXX | Warning |
-| NOTE | info |
-| REVIEW | hint |
+| NOTE | Info |
+| REVIEW | Hint |
 
 ## Extension Settings
 

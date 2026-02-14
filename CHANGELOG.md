@@ -1,3 +1,7 @@
+## [0.0.5] - 2026-02-14
+### Changed
+- Readme update
+
 ## [0.0.4] - 2026-02-14
 ### Added
 - Scan document while typing
