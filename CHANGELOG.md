@@ -1,3 +1,7 @@
+## [0.0.4] - 2026-02-14
+### Changed
+- Faster scanning
+
 ## [0.0.3] - 2026-02-08
 ### Changed
 - Rescan opened editors on config change

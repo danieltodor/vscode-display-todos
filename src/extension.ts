@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { readConfig, scanDocument, scanWorkspace, ScanConfig, getFileUris, CONFIG_SECTION } from "./scanner";
+import { readConfig, scanDocument, scanWorkspace, matchesScope, CONFIG_SECTION } from "./scanner";
 
 export function activate(context: vscode.ExtensionContext)
 {
@@ -12,8 +12,35 @@ export function activate(context: vscode.ExtensionContext)
     const inScopeUris = new Set<string>();
     const recentlySavedUris = new Set<string>();
 
+    // Cancellable workspace scan
+    let scanCts: vscode.CancellationTokenSource | undefined;
+    function startScan(): void
+    {
+        scanCts?.cancel();
+        scanCts?.dispose();
+        scanCts = new vscode.CancellationTokenSource();
+        const token = scanCts.token;
+        scanWorkspace(diagnosticCollection, config, inScopeUris, token);
+    }
+
+    // Debounced rescan for config changes
+    let rescanTimer: ReturnType<typeof setTimeout> | undefined;
+    const RESCAN_DEBOUNCE_MS = 400;
+    function debouncedRescan(): void
+    {
+        if (rescanTimer !== undefined)
+        {
+            clearTimeout(rescanTimer);
+        }
+        rescanTimer = setTimeout(() =>
+        {
+            rescanTimer = undefined;
+            startScan();
+        }, RESCAN_DEBOUNCE_MS);
+    }
+
     // Initial full workspace scan
-    scanWorkspace(diagnosticCollection, config, inScopeUris);
+    startScan();
 
     // Re-scan a single file on save
     context.subscriptions.push(
@@ -63,15 +90,6 @@ export function activate(context: vscode.ExtensionContext)
         })
     );
 
-    /**
-     * Check whether a URI is within the configured include/exclude scope
-     */
-    async function isInScope(uri: vscode.Uri, cfg: ScanConfig): Promise<boolean>
-    {
-        const uris = await getFileUris(cfg);
-        return uris.some((u) => u.toString() === uri.toString());
-    }
-
     // Handle file creates, deletes, and renames
     const watcher = vscode.workspace.createFileSystemWatcher("**/*");
 
@@ -85,7 +103,7 @@ export function activate(context: vscode.ExtensionContext)
     {
         try
         {
-            if (!await isInScope(uri, config))
+            if (!matchesScope(uri, config))
             {
                 return;
             }
@@ -126,10 +144,23 @@ export function activate(context: vscode.ExtensionContext)
             if (e.affectsConfiguration(CONFIG_SECTION))
             {
                 config = readConfig(displayName);
-                scanWorkspace(diagnosticCollection, config, inScopeUris);
+                debouncedRescan();
             }
         })
     );
+
+    // Clean up on deactivation
+    context.subscriptions.push({
+        dispose()
+        {
+            scanCts?.cancel();
+            scanCts?.dispose();
+            if (rescanTimer !== undefined)
+            {
+                clearTimeout(rescanTimer);
+            }
+        }
+    });
 }
 
 export function deactivate() { }
