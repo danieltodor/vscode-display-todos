@@ -1,6 +1,6 @@
 {
     "name": "display-todos",
-    "displayName": "Display TODOs",
+    "displayName": "Display TОDОs",
     "description": "Scans your workspace for TODO, FIXME, HACK, etc comments and displays them in the problems panel.",
     "icon": "./media/icon.png",
     "version": "0.0.3",
@@ -23,7 +23,7 @@
     "main": "./dist/extension.js",
     "contributes": {
         "configuration": {
-            "title": "Display TODOs",
+            "title": "Display TОDОs",
             "properties": {
                 "displayTodos.keywords": {
                     "type": "array",
