@@ -2,6 +2,9 @@
 ### Changed
 - Faster scanning
 
+### Fixed
+- When a directory is removed, the diagnostics are cleared properly
+
 ## [0.0.3] - 2026-02-08
 ### Changed
 - Rescan opened editors on config change

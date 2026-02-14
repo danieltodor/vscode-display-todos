@@ -95,8 +95,26 @@ export function activate(context: vscode.ExtensionContext)
 
     watcher.onDidDelete((uri) =>
     {
-        diagnosticCollection.delete(uri);
-        inScopeUris.delete(uri.toString());
+        const key = uri.toString();
+
+        // Direct file match
+        if (inScopeUris.has(key))
+        {
+            diagnosticCollection.delete(uri);
+            inScopeUris.delete(key);
+            return;
+        }
+
+        // URI may be a directory — remove all tracked files under it
+        const prefix = key.endsWith("/") ? key : key + "/";
+        for (const scopeUri of inScopeUris)
+        {
+            if (scopeUri.startsWith(prefix))
+            {
+                diagnosticCollection.delete(vscode.Uri.parse(scopeUri));
+                inScopeUris.delete(scopeUri);
+            }
+        }
     });
 
     watcher.onDidCreate(async (uri) =>
