@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
-import { scanDocument, ScanConfig } from "../../src/scanner";
+import { isPathInScope, matchesScope, scanDocument, ScanConfig, toGlob } from "../scanner";
 
 const DEFAULT_CONFIG: ScanConfig = {
     keywords: [
@@ -12,7 +12,7 @@ const DEFAULT_CONFIG: ScanConfig = {
     ],
     include: ["**/*"],
     exclude: ["**/node_modules/**"],
-    pattern: "\\b({keywords})\\b[:\\s]+(.+)",
+    pattern: "\\b({keywords})\\b[:\\s]?(.*)",
     caseSensitive: true,
     displayName: "Display TODOs"
 };
@@ -150,5 +150,41 @@ suite("Scanner — scanDocument", () =>
         assert.strictEqual(diagnostics.length, 1);
         // "TODO: indented" starts at column 7
         assert.strictEqual(diagnostics[0].range.start.character, 7);
+    });
+});
+
+suite("Scanner — scope and globs", () =>
+{
+    test("isPathInScope treats empty include as include-all", () =>
+    {
+        assert.strictEqual(
+            isPathInScope("src/file.ts", [], ["**/node_modules/**"]),
+            true
+        );
+        assert.strictEqual(
+            isPathInScope("node_modules/pkg/index.ts", [], ["**/node_modules/**"]),
+            false
+        );
+    });
+
+    test("isPathInScope respects include and exclude patterns", () =>
+    {
+        assert.strictEqual(
+            isPathInScope("src/file.ts", ["src/**/*.ts"], []),
+            true
+        );
+        assert.strictEqual(
+            isPathInScope("src/file.js", ["src/**/*.ts"], []),
+            false
+        );
+        assert.strictEqual(
+            isPathInScope("src/generated/file.ts", ["src/**/*.ts"], ["src/generated/**"]),
+            false
+        );
+    });
+
+    test("matchesScope rejects non-file URIs", () =>
+    {
+        assert.strictEqual(matchesScope(vscode.Uri.parse("untitled:test"), DEFAULT_CONFIG), false);
     });
 });

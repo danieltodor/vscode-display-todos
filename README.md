@@ -30,6 +30,6 @@ comments, and displays them in the ****PROBLEMS**** panel.
 | `displayTodos.keywords` | `array` | See above | List of keywords to scan for and their diagnostic severities. |
 | `displayTodos.include` | `string[]` | `["**/*"]` | Glob patterns for files to include when scanning. |
 | `displayTodos.exclude` | `string[]` | `["**/.git/**", "**/.vscode/**", "**/node_modules/**", "**/build/**", "**/dist/**", "**/out/**"]` | Glob patterns for files to exclude when scanning. |
-| `displayTodos.pattern` | `string` | `\\b({keywords})\\b[:\\s]+(.+)` | Regex pattern used to match keywords. Use {keywords} as a placeholder for the joined keyword alternatives. Must contain two capture groups: group 1 for the matched keyword and group 2 for the trailing text. |
+| `displayTodos.pattern` | `string` | `\\b({keywords})\\b[:\\s]?(.*)` | Regex pattern used to match keywords. Use {keywords} as a placeholder for the joined keyword alternatives. Must contain two capture groups: group 1 for the matched keyword and group 2 for the trailing text. |
 | `displayTodos.caseSensitive` | `boolean` | `true` | Whether keyword matching is case-sensitive. When true, only exact case matches (e.g. TODO, not todo) are detected. |
 | `displayTodos.enable` | `boolean` | `true` | Enable or disable scanning for TODO comments. When false, all diagnostics are cleared and no scanning occurs. Can be overridden per language (e.g. \"[python]\": { \"displayTodos.enable\": false }). |

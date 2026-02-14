@@ -1,3 +1,8 @@
+## [0.0.6] - 2026-02-14
+### Changed
+- Glob-Regex conversion replaced with a library
+- Regex updated to match TODOs without message part
+
 ## [0.0.5] - 2026-02-14
 ### Changed
 - Readme update

@@ -109,7 +109,7 @@
                 },
                 "displayTodos.pattern": {
                     "type": "string",
-                    "default": "\\b({keywords})\\b[:\\s]+(.+)",
+                    "default": "\\b({keywords})\\b[:\\s]?(.*)",
                     "description": "Regex pattern used to match keywords. Use {keywords} as a placeholder for the joined keyword alternatives. Must contain two capture groups: group 1 for the matched keyword and group 2 for the trailing text."
                 },
                 "displayTodos.caseSensitive": {
@@ -141,15 +141,18 @@
         "test": "vscode-test"
     },
     "devDependencies": {
-        "@types/vscode": "1.109.0",
         "@types/mocha": "10.0.10",
         "@types/node": "25.2.2",
-        "typescript-eslint": "8.54.0",
-        "eslint": "9.39.2",
+        "@types/vscode": "1.109.0",
+        "@vscode/test-cli": "0.0.12",
+        "@vscode/test-electron": "2.5.2",
         "esbuild": "0.27.2",
+        "eslint": "9.39.2",
         "npm-run-all": "4.1.5",
         "typescript": "5.9.3",
-        "@vscode/test-cli": "0.0.12",
-        "@vscode/test-electron": "2.5.2"
+        "typescript-eslint": "8.54.0"
+    },
+    "dependencies": {
+        "minimatch": "10.2.0"
     }
 }

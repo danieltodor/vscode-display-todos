@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { minimatch } from "minimatch";
 
 export const CONFIG_SECTION = "displayTodos";
 
@@ -295,11 +296,15 @@ export async function scanWorkspace(
     // Scan opened editors that weren't covered by the file-glob scan
     for (const document of vscode.workspace.textDocuments)
     {
-        if (!inScopeUris.has(document.uri.toString()))
+        const key = document.uri.toString();
+        if (document.uri.scheme !== "file" || inScopeUris.has(key))
         {
-            const diagnostics = scanDocument(document, compiled);
-            diagnosticCollection.set(document.uri, diagnostics);
+            continue;
         }
+
+        inScopeUris.add(key);
+        const diagnostics = scanDocument(document, compiled);
+        diagnosticCollection.set(document.uri, diagnostics);
     }
 }
 
@@ -316,6 +321,11 @@ export async function getFileUris(config: ScanConfig)
  */
 export function matchesScope(uri: vscode.Uri, config: ScanConfig): boolean
 {
+    if (uri.scheme !== "file")
+    {
+        return false;
+    }
+
     const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
     if (!workspaceFolder)
     {
@@ -324,54 +334,27 @@ export function matchesScope(uri: vscode.Uri, config: ScanConfig): boolean
 
     const relativePath = vscode.workspace.asRelativePath(uri, false);
 
-    // Must match at least one include pattern
-    const included = config.include.some((pattern) =>
-        matchGlob(relativePath, pattern.trim())
-    );
+    return isPathInScope(relativePath, config.include, config.exclude);
+}
+
+/**
+ * Decide whether a workspace-relative path matches include/exclude patterns.
+ * Empty include means include all files.
+ */
+export function isPathInScope(path: string, include: string[], exclude: string[]): boolean
+{
+    const includePatterns = include.map((pattern) => pattern.trim()).filter(Boolean);
+    const excludePatterns = exclude.map((pattern) => pattern.trim()).filter(Boolean);
+
+    const included =
+        includePatterns.length === 0
+        || includePatterns.some((pattern) => minimatch(path, pattern, { dot: true }));
     if (!included)
     {
         return false;
     }
 
-    // Must not match any exclude pattern
-    const excluded = config.exclude.some((pattern) =>
-        matchGlob(relativePath, pattern.trim())
+    return !excludePatterns.some((pattern) =>
+        minimatch(path, pattern, { dot: true })
     );
-    return !excluded;
-}
-
-/**
- * Simple glob matcher for include/exclude patterns.
- * Handles common patterns like `**​/foo/**`, `*.ext`, etc.
- *
- * Uses placeholder characters to process compound `**` + `/` constructs
- * before single `*`, avoiding interference between replacement passes.
- */
-function matchGlob(path: string, pattern: string): boolean
-{
-    // Escape special regex characters (preserving glob wildcards * ? and /)
-    let regexSource = pattern
-        .replace(/[.+^${}()|[\]\\]/g, "\\$&");
-
-    // Replace compound ** patterns with placeholders (order matters:
-    // /**/ must be consumed before **/ and /**)
-    regexSource = regexSource
-        .replace(/\/\*\*\//g, "\x01")       // /**/ → placeholder
-        .replace(/\*\*\//g, "\x02")         // **/  → placeholder
-        .replace(/\/\*\*/g, "\x03")         // /**  → placeholder
-        .replace(/\*\*/g, "\x04");          // **   → placeholder
-
-    // Replace single wildcards
-    regexSource = regexSource
-        .replace(/\*/g, "[^/]*")
-        .replace(/\?/g, "[^/]");
-
-    // Expand placeholders into their regex equivalents
-    regexSource = regexSource
-        .replace(/\x01/g, "(/.*)?/")        // /**/ → "/" or "/any/path/"
-        .replace(/\x02/g, "(.*/)?")         // **/  → "" or "any/path/"
-        .replace(/\x03/g, "(/.*)?")         // /**  → "" or "/any/path"
-        .replace(/\x04/g, ".*");            // **   → anything
-
-    return new RegExp(`^${regexSource}$`).test(path);
 }
