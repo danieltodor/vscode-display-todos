@@ -42,6 +42,25 @@ export function activate(context: vscode.ExtensionContext)
     // Initial full workspace scan
     startScan();
 
+    // Debounced per-file rescan while typing
+    const changeTimers = new Map<string, ReturnType<typeof setTimeout>>();
+    const CHANGE_DEBOUNCE_MS = 300;
+    function debouncedDocumentRescan(document: vscode.TextDocument): void
+    {
+        const key = document.uri.toString();
+        const existing = changeTimers.get(key);
+        if (existing !== undefined)
+        {
+            clearTimeout(existing);
+        }
+        changeTimers.set(key, setTimeout(() =>
+        {
+            changeTimers.delete(key);
+            const diagnostics = scanDocument(document, config);
+            diagnosticCollection.set(document.uri, diagnostics);
+        }, CHANGE_DEBOUNCE_MS));
+    }
+
     // Re-scan a single file on save
     context.subscriptions.push(
         vscode.workspace.onDidSaveTextDocument((document) =>
@@ -55,8 +74,28 @@ export function activate(context: vscode.ExtensionContext)
             recentlySavedUris.add(key);
             setTimeout(() => recentlySavedUris.delete(key), 1000);
 
+            // Cancel any pending debounced rescan — save is authoritative
+            const pending = changeTimers.get(key);
+            if (pending !== undefined)
+            {
+                clearTimeout(pending);
+                changeTimers.delete(key);
+            }
+
             const diagnostics = scanDocument(document, config);
             diagnosticCollection.set(document.uri, diagnostics);
+        })
+    );
+
+    // Re-scan a file as the user types
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeTextDocument((e) =>
+        {
+            if (e.document.uri.scheme !== "file" || e.contentChanges.length === 0)
+            {
+                return;
+            }
+            debouncedDocumentRescan(e.document);
         })
     );
 
@@ -177,6 +216,11 @@ export function activate(context: vscode.ExtensionContext)
             {
                 clearTimeout(rescanTimer);
             }
+            for (const timer of changeTimers.values())
+            {
+                clearTimeout(timer);
+            }
+            changeTimers.clear();
         }
     });
 }

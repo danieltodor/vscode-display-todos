@@ -1,4 +1,7 @@
 ## [0.0.4] - 2026-02-14
+### Added
+- Scan document while typing
+
 ### Changed
 - Faster scanning
 
