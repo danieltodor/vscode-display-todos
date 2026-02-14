@@ -341,17 +341,37 @@ export function matchesScope(uri: vscode.Uri, config: ScanConfig): boolean
 }
 
 /**
- * Simple glob matcher for exclude patterns.
- * Handles common patterns like ** /foo/**, *.ext, etc.
+ * Simple glob matcher for include/exclude patterns.
+ * Handles common patterns like `**​/foo/**`, `*.ext`, etc.
+ *
+ * Uses placeholder characters to process compound `**` + `/` constructs
+ * before single `*`, avoiding interference between replacement passes.
  */
 function matchGlob(path: string, pattern: string): boolean
 {
-    // Convert glob to regex
-    const regexSource = pattern
-        .replace(/[.+^${}()|[\]\\]/g, "\\$&")
-        .replace(/\*\*/g, "\0")
+    // Escape special regex characters (preserving glob wildcards * ? and /)
+    let regexSource = pattern
+        .replace(/[.+^${}()|[\]\\]/g, "\\$&");
+
+    // Replace compound ** patterns with placeholders (order matters:
+    // /**/ must be consumed before **/ and /**)
+    regexSource = regexSource
+        .replace(/\/\*\*\//g, "\x01")       // /**/ → placeholder
+        .replace(/\*\*\//g, "\x02")         // **/  → placeholder
+        .replace(/\/\*\*/g, "\x03")         // /**  → placeholder
+        .replace(/\*\*/g, "\x04");          // **   → placeholder
+
+    // Replace single wildcards
+    regexSource = regexSource
         .replace(/\*/g, "[^/]*")
-        .replace(/\0/g, ".*")
         .replace(/\?/g, "[^/]");
+
+    // Expand placeholders into their regex equivalents
+    regexSource = regexSource
+        .replace(/\x01/g, "(/.*)?/")        // /**/ → "/" or "/any/path/"
+        .replace(/\x02/g, "(.*/)?")         // **/  → "" or "any/path/"
+        .replace(/\x03/g, "(/.*)?")         // /**  → "" or "/any/path"
+        .replace(/\x04/g, ".*");            // **   → anything
+
     return new RegExp(`^${regexSource}$`).test(path);
 }
