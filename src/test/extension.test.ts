@@ -52,7 +52,6 @@ function readDefaultConfigFromPackageJson(): ScanConfig
 }
 
 const DEFAULT_CONFIG: ScanConfig = readDefaultConfigFromPackageJson();
-const STRICT_TODO_PATTERN = DEFAULT_CONFIG.pattern;
 
 const TEST_ROOT_DIR = ".tmp-display-todos-tests";
 
@@ -344,18 +343,21 @@ suite("Scanner — scanDocument", () =>
         const strictPatternConfig: ScanConfig = {
             ...DEFAULT_CONFIG,
             keywords: [{ keyword: "TODO", severity: "warning" }],
-            pattern: STRICT_TODO_PATTERN
+            pattern: DEFAULT_CONFIG.pattern
         };
 
-        const lines = [
-            "// TODO asdasd sdsdf sdfsdf",
-            "// TODO: asdasd sdsdf sdfsdf",
-            "// TODO",
-            "//TODO",
-            "#TODO",
-            "# TODO",
-            "TODO",
-            "TODO asdasd",
+        const mustMatch = [
+            { line: "// TODO asdasd sdsdf sdfsdf", message: "TODO: asdasd sdsdf sdfsdf" },
+            { line: "// TODO: asdasd sdsdf sdfsdf", message: "TODO: asdasd sdsdf sdfsdf" },
+            { line: "// TODO", message: "TODO" },
+            { line: "//TODO", message: "TODO" },
+            { line: "#TODO", message: "TODO" },
+            { line: "# TODO", message: "TODO" },
+            { line: "TODO", message: "TODO" },
+            { line: "TODO asdasd", message: "TODO: asdasd" }
+        ];
+
+        const mustNotMatch = [
             "// TODO-asdasd",
             "// TODOs",
             "// TODO\"",
@@ -363,26 +365,20 @@ suite("Scanner — scanDocument", () =>
             "asdasd TODO asdasd"
         ];
 
-        const doc = await docFromText(lines.join("\n"));
+        const doc = await docFromText([
+            ...mustMatch.map((entry) => entry.line),
+            ...mustNotMatch
+        ].join("\n"));
         const diagnostics = scanDocument(doc, strictPatternConfig);
 
         assert.deepStrictEqual(
             diagnostics.map((d) => d.range.start.line),
-            [0, 1, 2, 3, 4, 5, 6, 7]
+            mustMatch.map((_, index) => index)
         );
 
         assert.deepStrictEqual(
             diagnostics.map((d) => d.message),
-            [
-                "TODO: asdasd sdsdf sdfsdf",
-                "TODO: asdasd sdsdf sdfsdf",
-                "TODO",
-                "TODO",
-                "TODO",
-                "TODO",
-                "TODO",
-                "TODO: asdasd"
-            ]
+            mustMatch.map((entry) => entry.message)
         );
     });
 });
@@ -412,43 +408,23 @@ suite("Scanner — compile + text scanning", () =>
         const strictPatternConfig: ScanConfig = {
             ...DEFAULT_CONFIG,
             keywords: [{ keyword: "TODO", severity: "warning" }],
-            pattern: STRICT_TODO_PATTERN
+            pattern: DEFAULT_CONFIG.pattern
         };
 
         const compiled = compileConfig(strictPatternConfig);
 
-        const shouldMatch = [
-            "// TODO asdasd sdsdf sdfsdf",
-            "// TODO: asdasd sdsdf sdfsdf",
-            "// TODO",
-            "//TODO",
-            "#TODO",
-            "# TODO",
-            "TODO",
-            "TODO asdasd"
+        const mustMatch = [
+            { line: "// TODO asdasd sdsdf sdfsdf", message: "TODO: asdasd sdsdf sdfsdf" },
+            { line: "// TODO: asdasd sdsdf sdfsdf", message: "TODO: asdasd sdsdf sdfsdf" },
+            { line: "// TODO", message: "TODO" },
+            { line: "//TODO", message: "TODO" },
+            { line: "#TODO", message: "TODO" },
+            { line: "# TODO", message: "TODO" },
+            { line: "TODO", message: "TODO" },
+            { line: "TODO asdasd", message: "TODO: asdasd" }
         ];
 
-        for (const line of shouldMatch)
-        {
-            const diagnostics = scanText(line, compiled);
-            assert.strictEqual(diagnostics.length, 1, `Expected match for: ${line}`);
-        }
-
-        assert.deepStrictEqual(
-            shouldMatch.map((line) => (scanText(line, compiled)[0]?.message ?? "")),
-            [
-                "TODO: asdasd sdsdf sdfsdf",
-                "TODO: asdasd sdsdf sdfsdf",
-                "TODO",
-                "TODO",
-                "TODO",
-                "TODO",
-                "TODO",
-                "TODO: asdasd"
-            ]
-        );
-
-        const shouldNotMatch = [
+        const mustNotMatch = [
             "// TODO-asdasd",
             "// TODOs",
             "// TODO\"",
@@ -456,7 +432,18 @@ suite("Scanner — compile + text scanning", () =>
             "asdasd TODO asdasd"
         ];
 
-        for (const line of shouldNotMatch)
+        for (const { line } of mustMatch)
+        {
+            const diagnostics = scanText(line, compiled);
+            assert.strictEqual(diagnostics.length, 1, `Expected match for: ${line}`);
+        }
+
+        assert.deepStrictEqual(
+            mustMatch.map((entry) => (scanText(entry.line, compiled)[0]?.message ?? "")),
+            mustMatch.map((entry) => entry.message)
+        );
+
+        for (const line of mustNotMatch)
         {
             const diagnostics = scanText(line, compiled);
             assert.strictEqual(diagnostics.length, 0, `Expected no match for: ${line}`);
@@ -468,7 +455,7 @@ suite("Scanner — compile + text scanning", () =>
         const strictPatternConfig: ScanConfig = {
             ...DEFAULT_CONFIG,
             keywords: [{ keyword: "TODO", severity: "warning" }],
-            pattern: STRICT_TODO_PATTERN
+            pattern: DEFAULT_CONFIG.pattern
         };
 
         const input = [
