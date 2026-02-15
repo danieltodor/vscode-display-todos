@@ -30,6 +30,8 @@ const DEFAULT_CONFIG: ScanConfig = {
     caseSensitive: true
 };
 
+const STRICT_TODO_PATTERN = "^\\s*(?:(?:\\/\\/|#)\\s*)?\\b({keywords})(?=[:\\s]|$)(?:\\s*:\\s*|\\s+)?(.*)$";
+
 const TEST_ROOT_DIR = ".tmp-display-todos-tests";
 
 let provisionedWorkspaceRoot: vscode.Uri | undefined;
@@ -154,7 +156,7 @@ suite("Scanner — scanDocument", () =>
             diagnostics[0].severity,
             vscode.DiagnosticSeverity.Warning
         );
-        assert.strictEqual(diagnostics[0].source, "Display TODOs");
+        assert.strictEqual(diagnostics[0].source, "Disрlаy TОDОs");
     });
 
     test("detects a FIXME comment as error", async () =>
@@ -301,6 +303,53 @@ suite("Scanner — scanDocument", () =>
         assert.strictEqual(diagnostics.length, 1);
         assert.strictEqual(diagnostics[0].severity, vscode.DiagnosticSeverity.Warning);
     });
+
+    test("updated default-style pattern matches and rejects expected TODO forms", async () =>
+    {
+        const strictPatternConfig: ScanConfig = {
+            ...DEFAULT_CONFIG,
+            keywords: [{ keyword: "TODO", severity: "warning" }],
+            pattern: STRICT_TODO_PATTERN
+        };
+
+        const lines = [
+            "// TODO asdasd sdsdf sdfsdf",
+            "// TODO: asdasd sdsdf sdfsdf",
+            "// TODO",
+            "//TODO",
+            "#TODO",
+            "# TODO",
+            "TODO",
+            "TODO asdasd",
+            "// TODO-asdasd",
+            "// TODOs",
+            "// TODO\"",
+            "// TODO'",
+            "asdasd TODO asdasd"
+        ];
+
+        const doc = await docFromText(lines.join("\n"));
+        const diagnostics = scanDocument(doc, strictPatternConfig);
+
+        assert.deepStrictEqual(
+            diagnostics.map((d) => d.range.start.line),
+            [0, 1, 2, 3, 4, 5, 6, 7]
+        );
+
+        assert.deepStrictEqual(
+            diagnostics.map((d) => d.message),
+            [
+                "TODO: asdasd sdsdf sdfsdf",
+                "TODO: asdasd sdsdf sdfsdf",
+                "TODO",
+                "TODO",
+                "TODO",
+                "TODO",
+                "TODO",
+                "TODO: asdasd"
+            ]
+        );
+    });
 });
 
 suite("Scanner — compile + text scanning", () =>
@@ -321,6 +370,88 @@ suite("Scanner — compile + text scanning", () =>
         const diagnostics = scanText("# todo: lower-case", compiled);
         assert.strictEqual(diagnostics.length, 1);
         assert.strictEqual(diagnostics[0].message, "TODO: lower-case");
+    });
+
+    test("updated default-style pattern matches and rejects expected TODO forms", () =>
+    {
+        const strictPatternConfig: ScanConfig = {
+            ...DEFAULT_CONFIG,
+            keywords: [{ keyword: "TODO", severity: "warning" }],
+            pattern: STRICT_TODO_PATTERN
+        };
+
+        const compiled = compileConfig(strictPatternConfig);
+
+        const shouldMatch = [
+            "// TODO asdasd sdsdf sdfsdf",
+            "// TODO: asdasd sdsdf sdfsdf",
+            "// TODO",
+            "//TODO",
+            "#TODO",
+            "# TODO",
+            "TODO",
+            "TODO asdasd"
+        ];
+
+        for (const line of shouldMatch)
+        {
+            const diagnostics = scanText(line, compiled);
+            assert.strictEqual(diagnostics.length, 1, `Expected match for: ${line}`);
+        }
+
+        assert.deepStrictEqual(
+            shouldMatch.map((line) => (scanText(line, compiled)[0]?.message ?? "")),
+            [
+                "TODO: asdasd sdsdf sdfsdf",
+                "TODO: asdasd sdsdf sdfsdf",
+                "TODO",
+                "TODO",
+                "TODO",
+                "TODO",
+                "TODO",
+                "TODO: asdasd"
+            ]
+        );
+
+        const shouldNotMatch = [
+            "// TODO-asdasd",
+            "// TODOs",
+            "// TODO\"",
+            "// TODO'",
+            "asdasd TODO asdasd"
+        ];
+
+        for (const line of shouldNotMatch)
+        {
+            const diagnostics = scanText(line, compiled);
+            assert.strictEqual(diagnostics.length, 0, `Expected no match for: ${line}`);
+        }
+    });
+
+    test("scanText and scanDocument return equivalent diagnostics", async () =>
+    {
+        const strictPatternConfig: ScanConfig = {
+            ...DEFAULT_CONFIG,
+            keywords: [{ keyword: "TODO", severity: "warning" }],
+            pattern: STRICT_TODO_PATTERN
+        };
+
+        const input = [
+            "// TODO first",
+            "asdasd TODO asdasd",
+            "# TODO: second",
+            "// TODOs"
+        ].join("\n");
+
+        const compiled = compileConfig(strictPatternConfig);
+        const textDiagnostics = scanText(input, compiled);
+        const doc = await docFromText(input);
+        const docDiagnostics = scanDocument(doc, strictPatternConfig);
+
+        assert.deepStrictEqual(
+            docDiagnostics.map((d) => ({ line: d.range.start.line, message: d.message, severity: d.severity })),
+            textDiagnostics.map((d) => ({ line: d.range.start.line, message: d.message, severity: d.severity }))
+        );
     });
 });
 

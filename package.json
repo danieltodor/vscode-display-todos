@@ -109,7 +109,7 @@
                 },
                 "displayTodos.pattern": {
                     "type": "string",
-                    "default": "\\b({keywords})\\b[:\\s]?(.*)",
+                    "default": "^\\s*(?:(?:\\/\\/|#)\\s*)?\\b({keywords})(?=[:\\s]|$)(?:\\s*:\\s*|\\s+)?(.*)$",
                     "description": "Regex pattern used to match keywords. Use {keywords} as a placeholder for the joined keyword alternatives. Must contain two capture groups: group 1 for the matched keyword and group 2 for the trailing text."
                 },
                 "displayTodos.caseSensitive": {
