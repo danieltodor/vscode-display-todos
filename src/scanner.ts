@@ -6,6 +6,28 @@ export const CONFIG_SECTION = "displayTodos";
 /** Concurrency limit for parallel file reads during workspace scan. */
 const BATCH_SIZE = 50;
 
+/** Extensions commonly associated with binary/non-text content. */
+const BINARY_EXTENSIONS = new Set([
+    ".7z", ".a", ".apk", ".avif", ".bin", ".bmp", ".class", ".dat", ".db", ".dmg", ".dll",
+    ".dylib", ".eot", ".exe", ".flac", ".gif", ".gz", ".ico", ".icns", ".iso", ".jar", ".jpeg",
+    ".jpg", ".lib", ".m4a", ".mov", ".mp3", ".mp4", ".o", ".obj", ".otf", ".pdf", ".png",
+    ".pyc", ".so", ".sqlite", ".tar", ".tif", ".tiff", ".ttf", ".war", ".wasm", ".wav", ".webm",
+    ".webp", ".woff", ".woff2", ".xz", ".zip"
+]);
+
+/** Extensions commonly associated with text content. */
+const TEXT_EXTENSIONS = new Set([
+    ".bat", ".c", ".cfg", ".clj", ".cls", ".cmd", ".conf", ".cpp", ".cs", ".css", ".csv", ".dart",
+    ".dockerfile", ".env", ".eslintignore", ".gitattributes", ".gitignore", ".go", ".gradle", ".graphql",
+    ".groovy", ".h", ".hpp", ".htm", ".html", ".ini", ".java", ".js", ".json", ".jsx", ".kt", ".kts",
+    ".less", ".lock", ".log", ".lua", ".m", ".make", ".markdown", ".md", ".mjs", ".php", ".pl", ".properties",
+    ".ps1", ".py", ".r", ".rb", ".rs", ".scss", ".sh", ".sql", ".svg", ".svelte", ".swift", ".toml",
+    ".ts", ".tsx", ".txt", ".vue", ".xml", ".yaml", ".yml"
+]);
+
+const BINARY_HEURISTIC_SAMPLE_SIZE = 4096;
+const BINARY_CONTROL_CHAR_RATIO_THRESHOLD = 0.2;
+
 export interface KeywordConfig
 {
     keyword: string;
@@ -177,6 +199,106 @@ function isCompiledConfig(config: ScanConfig | CompiledConfig): config is Compil
     return "pattern" in config && config.pattern instanceof RegExp;
 }
 
+function getLowercaseExtension(uri: vscode.Uri): string
+{
+    const path = uri.path;
+    const dot = path.lastIndexOf(".");
+    if (dot < 0)
+    {
+        return "";
+    }
+    return path.slice(dot).toLowerCase();
+}
+
+function isLikelyBinaryByExtension(uri: vscode.Uri): boolean
+{
+    return BINARY_EXTENSIONS.has(getLowercaseExtension(uri));
+}
+
+function isLikelyTextByExtension(uri: vscode.Uri): boolean
+{
+    return TEXT_EXTENSIONS.has(getLowercaseExtension(uri));
+}
+
+function isLikelyBinaryByBytes(bytes: Uint8Array): boolean
+{
+    if (bytes.length === 0)
+    {
+        return false;
+    }
+
+    const sampleLength = Math.min(bytes.length, BINARY_HEURISTIC_SAMPLE_SIZE);
+    const sample = bytes.subarray(0, sampleLength);
+
+    for (const byte of sample)
+    {
+        if (byte === 0)
+        {
+            return true;
+        }
+    }
+
+    try
+    {
+        new TextDecoder("utf-8", { fatal: true }).decode(sample);
+    } catch
+    {
+        return true;
+    }
+
+    let suspiciousControlChars = 0;
+    for (const byte of sample)
+    {
+        const isAsciiControl = byte < 0x20 && byte !== 0x09 && byte !== 0x0A && byte !== 0x0D;
+        const isExtendedControl = byte >= 0x7F && byte <= 0x9F;
+        if (isAsciiControl || isExtendedControl)
+        {
+            suspiciousControlChars++;
+        }
+    }
+
+    return (suspiciousControlChars / sampleLength) > BINARY_CONTROL_CHAR_RATIO_THRESHOLD;
+}
+
+function isLikelyBinaryContent(uri: vscode.Uri, bytes: Uint8Array): boolean
+{
+    if (isLikelyTextByExtension(uri))
+    {
+        return false;
+    }
+    if (isLikelyBinaryByExtension(uri))
+    {
+        return true;
+    }
+    return isLikelyBinaryByBytes(bytes);
+}
+
+export async function isLikelyBinaryFile(uri: vscode.Uri): Promise<boolean>
+{
+    if (uri.scheme !== "file")
+    {
+        return true;
+    }
+
+    if (isLikelyTextByExtension(uri))
+    {
+        return false;
+    }
+    if (isLikelyBinaryByExtension(uri))
+    {
+        return true;
+    }
+
+    try
+    {
+        const bytes = await vscode.workspace.fs.readFile(uri);
+        return isLikelyBinaryByBytes(bytes);
+    } catch
+    {
+        return true;
+    }
+}
+
 /**
  * Read the extension configuration from VS Code settings.
  */
@@ -265,8 +387,18 @@ export async function scanWorkspace(
                     return { uri, diagnostics: scanDocument(openDoc, compiled) };
                 }
 
+                if (isLikelyBinaryByExtension(uri))
+                {
+                    return { uri, diagnostics: [] };
+                }
+
                 // Read raw bytes — much cheaper than openTextDocument
                 const bytes = await vscode.workspace.fs.readFile(uri);
+                if (isLikelyBinaryContent(uri, bytes))
+                {
+                    return { uri, diagnostics: [] };
+                }
+
                 const text = decoder.decode(bytes);
                 return { uri, diagnostics: scanText(text, compiled) };
             })

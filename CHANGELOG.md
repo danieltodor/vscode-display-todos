@@ -1,3 +1,7 @@
+## [0.0.8] -
+### Changed
+- Skip checking files that are not text files
+
 ## [0.0.7] - 2026-02-15
 ### Changed
 - Improved regex matching

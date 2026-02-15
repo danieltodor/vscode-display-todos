@@ -124,6 +124,14 @@ async function writeTestFile(relativePath: string, content: string): Promise<vsc
     return uri;
 }
 
+async function writeBinaryTestFile(relativePath: string, bytes: Uint8Array): Promise<vscode.Uri>
+{
+    const uri = await testFileUri(relativePath);
+    await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(uri, ".."));
+    await vscode.workspace.fs.writeFile(uri, bytes);
+    return uri;
+}
+
 async function cleanupTestFiles(): Promise<void>
 {
     try
@@ -653,5 +661,59 @@ suite("Scanner — workspace scan", () =>
 
         assert.strictEqual(collection.get(vscode.Uri.parse("file:///stale"))?.length ?? 0, 0);
         assert.strictEqual(inScopeUris.size, 0);
+    });
+
+    test("scanWorkspace skips binary files by extension", async () =>
+    {
+        const textUri = await writeTestFile("scan/mixed.ts", "// TODO: should be detected\n");
+        const binaryByExtensionUri = await writeBinaryTestFile(
+            "scan/image.png",
+            new Uint8Array([0x89, 0x50, 0x4E, 0x47, 0x00, 0x54, 0x4F, 0x44, 0x4F])
+        );
+
+        await scanWorkspace(
+            collection,
+            {
+                ...DEFAULT_CONFIG,
+                include: [`${TEST_ROOT_DIR}/scan/**/*`],
+                exclude: [],
+            },
+            inScopeUris
+        );
+
+        const textDiagnostics = collection.get(textUri) ?? [];
+        assert.strictEqual(textDiagnostics.length, 1);
+        assert.strictEqual(textDiagnostics[0].message, "TODO: should be detected");
+
+        const binaryDiagnostics = collection.get(binaryByExtensionUri) ?? [];
+        assert.strictEqual(binaryDiagnostics.length, 0);
+        assert.ok(inScopeUris.has(binaryByExtensionUri.toString()));
+    });
+
+    test("scanWorkspace skips binary files by byte heuristic", async () =>
+    {
+        const textUri = await writeTestFile("scan/heuristic-text.txt", "TODO: text file should be scanned\n");
+        const binaryHeuristicUri = await writeBinaryTestFile(
+            "scan/no-extension-bin",
+            new Uint8Array([0x00, 0x54, 0x4F, 0x44, 0x4F, 0x3A, 0x20, 0x68, 0x69])
+        );
+
+        await scanWorkspace(
+            collection,
+            {
+                ...DEFAULT_CONFIG,
+                include: [`${TEST_ROOT_DIR}/scan/**/*`],
+                exclude: [],
+            },
+            inScopeUris
+        );
+
+        const textDiagnostics = collection.get(textUri) ?? [];
+        assert.strictEqual(textDiagnostics.length, 1);
+        assert.strictEqual(textDiagnostics[0].message, "TODO: text file should be scanned");
+
+        const binaryDiagnostics = collection.get(binaryHeuristicUri) ?? [];
+        assert.strictEqual(binaryDiagnostics.length, 0);
+        assert.ok(inScopeUris.has(binaryHeuristicUri.toString()));
     });
 });

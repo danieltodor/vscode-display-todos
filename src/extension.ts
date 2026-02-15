@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { readConfig, scanDocument, scanWorkspace, matchesScope, CONFIG_SECTION } from "./scanner";
+import { readConfig, scanDocument, scanWorkspace, matchesScope, CONFIG_SECTION, isLikelyBinaryFile } from "./scanner";
 
 export function activate(context: vscode.ExtensionContext)
 {
@@ -162,6 +162,10 @@ export function activate(context: vscode.ExtensionContext)
             {
                 return;
             }
+            if (await isLikelyBinaryFile(uri))
+            {
+                return;
+            }
             const document = await vscode.workspace.openTextDocument(uri);
             inScopeUris.add(uri.toString());
             const diagnostics = scanDocument(document, config);
@@ -179,6 +183,11 @@ export function activate(context: vscode.ExtensionContext)
             const key = uri.toString();
             if (recentlySavedUris.has(key) || !inScopeUris.has(key))
             {
+                return;
+            }
+            if (await isLikelyBinaryFile(uri))
+            {
+                diagnosticCollection.delete(uri);
                 return;
             }
             const document = await vscode.workspace.openTextDocument(uri);
