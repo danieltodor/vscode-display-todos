@@ -1,3 +1,7 @@
+## [0.0.7] - 2026-02-15
+### Changed
+- Improved regex matching
+
 ## [0.0.6] - 2026-02-14
 ### Changed
 - Glob-Regex conversion replaced with a library

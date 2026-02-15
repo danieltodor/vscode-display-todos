@@ -3,7 +3,7 @@
     "displayName": "Display TODOs",
     "description": "Scans your workspace for TODO, FIXME, HACK, etc comments and displays them in the problems panel.",
     "icon": "./media/icon.png",
-    "version": "0.0.6",
+    "version": "0.0.7",
     "preview": false,
     "publisher": "danieltodor",
     "repository": {
