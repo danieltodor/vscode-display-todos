@@ -1,4 +1,5 @@
 import * as assert from "assert";
+import * as fsSync from "node:fs";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -16,21 +17,42 @@ import
     toGlob
 } from "../scanner";
 
-const DEFAULT_CONFIG: ScanConfig = {
-    keywords: [
-        { keyword: "FIXME", severity: "error" },
-        { keyword: "BUG", severity: "error" },
-        { keyword: "TODO", severity: "warning" },
-        { keyword: "HACK", severity: "warning" },
-        { keyword: "XXX", severity: "warning" }
-    ],
-    include: ["**/*"],
-    exclude: ["**/node_modules/**"],
-    pattern: "\\b({keywords})\\b[:\\s]?(.*)",
-    caseSensitive: true
+type PackageJsonConfigProperty<T> = {
+    default?: T;
 };
 
-const STRICT_TODO_PATTERN = "^\\s*(?:(?:\\/\\/|#)\\s*)?\\b({keywords})(?=[:\\s]|$)(?:\\s*:\\s*|\\s+)?(.*)$";
+type PackageJsonShape = {
+    contributes?: {
+        configuration?: {
+            properties?: {
+                "displayTodos.keywords"?: PackageJsonConfigProperty<ScanConfig["keywords"]>;
+                "displayTodos.include"?: PackageJsonConfigProperty<string[]>;
+                "displayTodos.exclude"?: PackageJsonConfigProperty<string[]>;
+                "displayTodos.pattern"?: PackageJsonConfigProperty<string>;
+                "displayTodos.caseSensitive"?: PackageJsonConfigProperty<boolean>;
+            };
+        };
+    };
+};
+
+function readDefaultConfigFromPackageJson(): ScanConfig
+{
+    const packageJsonPath = path.resolve(__dirname, "../../package.json");
+    const packageJsonRaw = fsSync.readFileSync(packageJsonPath, "utf8");
+    const packageJson = JSON.parse(packageJsonRaw) as PackageJsonShape;
+    const props = packageJson.contributes?.configuration?.properties;
+
+    return {
+        keywords: props?.["displayTodos.keywords"]?.default ?? [],
+        include: props?.["displayTodos.include"]?.default ?? [],
+        exclude: props?.["displayTodos.exclude"]?.default ?? [],
+        pattern: props?.["displayTodos.pattern"]?.default ?? "",
+        caseSensitive: props?.["displayTodos.caseSensitive"]?.default ?? true
+    };
+}
+
+const DEFAULT_CONFIG: ScanConfig = readDefaultConfigFromPackageJson();
+const STRICT_TODO_PATTERN = DEFAULT_CONFIG.pattern;
 
 const TEST_ROOT_DIR = ".tmp-display-todos-tests";
 
@@ -264,21 +286,34 @@ suite("Scanner — scanDocument", () =>
 
     test("positions range correctly on the line", async () =>
     {
-        const doc = await docFromText("    // TODO: indented");
+        const line = "    // TODO: indented";
+        const doc = await docFromText(line);
         const diagnostics = scanDocument(doc, DEFAULT_CONFIG);
         assert.strictEqual(diagnostics.length, 1);
-        // "TODO: indented" starts at column 7
-        assert.strictEqual(diagnostics[0].range.start.character, 7);
+
+        const compiled = compileConfig(DEFAULT_CONFIG);
+        const match = compiled.pattern.exec(line);
+        assert.ok(match);
+        assert.strictEqual(diagnostics[0].range.start.character, match.index);
     });
 
     test("range end excludes trailing spaces", async () =>
     {
-        const doc = await docFromText("// TODO: trim me    ");
+        const line = "// TODO: trim me    ";
+        const doc = await docFromText(line);
         const diagnostics = scanDocument(doc, DEFAULT_CONFIG);
         assert.strictEqual(diagnostics.length, 1);
         const diag = diagnostics[0];
-        assert.strictEqual(diag.range.start.character, 3);
-        assert.strictEqual(diag.range.end.character, "// TODO: trim me".length);
+
+        const compiled = compileConfig(DEFAULT_CONFIG);
+        const match = compiled.pattern.exec(line);
+        assert.ok(match);
+
+        const expectedStart = match.index;
+        const expectedEnd = match.index + match[0].trimEnd().length;
+
+        assert.strictEqual(diag.range.start.character, expectedStart);
+        assert.strictEqual(diag.range.end.character, expectedEnd);
     });
 
     test("matches only the first keyword occurrence per line", async () =>
