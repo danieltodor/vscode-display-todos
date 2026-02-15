@@ -19,7 +19,6 @@ export interface ScanConfig
     exclude: string[];
     pattern: string;
     caseSensitive: boolean;
-    displayName: string;
 }
 
 /**
@@ -31,7 +30,6 @@ export interface CompiledConfig
     pattern: RegExp;
     severityLookup: Map<string, vscode.DiagnosticSeverity>;
     caseSensitive: boolean;
-    displayName: string;
 }
 
 /**
@@ -45,15 +43,13 @@ export function compileConfig(config: ScanConfig): CompiledConfig
         return {
             pattern: /(?!)/,  // never-matching regex
             severityLookup: new Map(),
-            caseSensitive: config.caseSensitive,
-            displayName: config.displayName
+            caseSensitive: config.caseSensitive
         };
     }
     return {
         pattern: buildPattern(config.keywords, config.pattern, config.caseSensitive),
         severityLookup: buildSeverityLookup(config.keywords, config.caseSensitive),
-        caseSensitive: config.caseSensitive,
-        displayName: config.displayName
+        caseSensitive: config.caseSensitive
     };
 }
 
@@ -142,7 +138,7 @@ function scanLines(
     lineCount: number
 ): vscode.Diagnostic[]
 {
-    const { pattern, severityLookup, caseSensitive, displayName } = compiled;
+    const { pattern, severityLookup, caseSensitive } = compiled;
     const diagnostics: vscode.Diagnostic[] = [];
 
     for (let lineIndex = 0; lineIndex < lineCount; lineIndex++)
@@ -169,7 +165,7 @@ function scanLines(
             severityLookup.get(keyword) ?? vscode.DiagnosticSeverity.Warning;
 
         const diagnostic = new vscode.Diagnostic(range, message, severity);
-        diagnostic.source = displayName;
+        diagnostic.source = "Disрlаy TОDОs"; // Mixed with cyrillic, so it doesn't interfere with filtering
         diagnostics.push(diagnostic);
     }
 
@@ -184,7 +180,7 @@ function isCompiledConfig(config: ScanConfig | CompiledConfig): config is Compil
 /**
  * Read the extension configuration from VS Code settings.
  */
-export function readConfig(displayName: string): ScanConfig
+export function readConfig(): ScanConfig
 {
     const cfg = vscode.workspace.getConfiguration(CONFIG_SECTION);
     return {
@@ -192,8 +188,7 @@ export function readConfig(displayName: string): ScanConfig
         include: cfg.get<string[]>("include", []),
         exclude: cfg.get<string[]>("exclude", []),
         pattern: cfg.get<string>("pattern", ""),
-        caseSensitive: cfg.get<boolean>("caseSensitive", true),
-        displayName
+        caseSensitive: cfg.get<boolean>("caseSensitive", true)
     };
 }
 

@@ -3,12 +3,10 @@ import { readConfig, scanDocument, scanWorkspace, matchesScope, CONFIG_SECTION }
 
 export function activate(context: vscode.ExtensionContext)
 {
-    const displayName: string = context.extension.packageJSON.displayName;
-
     const diagnosticCollection = vscode.languages.createDiagnosticCollection(CONFIG_SECTION);
     context.subscriptions.push(diagnosticCollection);
 
-    let config = readConfig(displayName);
+    let config = readConfig();
     const inScopeUris = new Set<string>();
     const recentlySavedUris = new Set<string>();
 
@@ -200,7 +198,7 @@ export function activate(context: vscode.ExtensionContext)
         {
             if (e.affectsConfiguration(CONFIG_SECTION))
             {
-                config = readConfig(displayName);
+                config = readConfig();
                 debouncedRescan();
             }
         })

@@ -13,7 +13,7 @@ import
     scanText,
     scanWorkspace,
     ScanConfig,
-    toGlob,
+    toGlob
 } from "../scanner";
 
 const DEFAULT_CONFIG: ScanConfig = {
@@ -27,8 +27,7 @@ const DEFAULT_CONFIG: ScanConfig = {
     include: ["**/*"],
     exclude: ["**/node_modules/**"],
     pattern: "\\b({keywords})\\b[:\\s]?(.*)",
-    caseSensitive: true,
-    displayName: "Display TODOs"
+    caseSensitive: true
 };
 
 const TEST_ROOT_DIR = ".tmp-display-todos-tests";
@@ -317,13 +316,11 @@ suite("Scanner — compile + text scanning", () =>
     {
         const compiled = compileConfig({
             ...DEFAULT_CONFIG,
-            caseSensitive: false,
-            displayName: "Custom Source",
+            caseSensitive: false
         });
         const diagnostics = scanText("# todo: lower-case", compiled);
         assert.strictEqual(diagnostics.length, 1);
         assert.strictEqual(diagnostics[0].message, "TODO: lower-case");
-        assert.strictEqual(diagnostics[0].source, "Custom Source");
     });
 });
 
