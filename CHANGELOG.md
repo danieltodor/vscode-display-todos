@@ -1,6 +1,9 @@
-## [0.0.8] -
+## [0.0.8] - 2026-02-15
 ### Changed
 - Skip checking files that are not text files
+
+### Added
+- 2 new directories added to the exclude list
 
 ## [0.0.7] - 2026-02-15
 ### Changed
