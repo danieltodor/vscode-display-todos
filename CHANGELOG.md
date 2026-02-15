@@ -1,3 +1,7 @@
+## [0.0.9] - 2026-02-15
+### Changed
+- Improved regex for better comment handling
+
 ## [0.0.8] - 2026-02-15
 ### Changed
 - Skip checking files that are not text files

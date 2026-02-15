@@ -26,11 +26,11 @@ comments, and displays them in the ****PROBLEMS**** panel.
 
 ## Extension Settings
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `displayTodos.keywords` | `array` | See above | List of keywords to scan for and their diagnostic severities. |
-| `displayTodos.include` | `string[]` | `["**/*"]` | Glob patterns for files to include when scanning. |
-| `displayTodos.exclude` | `string[]` | `["**/.git/**", "**/.vscode/**", "**/node_modules/**", "**/build/**", "**/dist/**", "**/out/**"]` | Glob patterns for files to exclude when scanning. |
-| `displayTodos.pattern` | `string` | `^\\s*(?:(?:\\/\\/\|#)\\s*)?\\b({keywords})(?=[:\\s]\|$)(?:\\s*:\\s*\|\\s+)?(.*)$` | Regex pattern used to match keywords. Use {keywords} as a placeholder for the joined keyword alternatives. Must contain two capture groups: group 1 for the matched keyword and group 2 for the trailing text. |
-| `displayTodos.caseSensitive` | `boolean` | `true` | Whether keyword matching is case-sensitive. When true, only exact case matches (e.g. TODO, not todo) are detected. |
-| `displayTodos.enable` | `boolean` | `true` | Enable or disable scanning for TODO comments. When false, all diagnostics are cleared and no scanning occurs. Can be overridden per language (e.g. \"[python]\": { \"displayTodos.enable\": false }). |
+| Setting | Description |
+|---------|-------------|
+| `displayTodos.keywords` | List of keywords to scan for and their diagnostic severities. |
+| `displayTodos.include` | Glob patterns for files to include when scanning. |
+| `displayTodos.exclude` | Glob patterns for files to exclude when scanning. |
+| `displayTodos.pattern` | Regex pattern used to match keywords. Use {keywords} as a placeholder for the joined keyword alternatives. Must contain two capture groups: group 1 for the matched keyword and group 2 for the trailing text. |
+| `displayTodos.caseSensitive` | Whether keyword matching is case-sensitive. When true, only exact case matches (e.g. TODO, not todo) are detected. |
+| `displayTodos.enable` | Enable or disable scanning for TODO comments. When false, all diagnostics are cleared and no scanning occurs. Can be overridden per language (e.g. \"[python]\": { \"displayTodos.enable\": false }). |

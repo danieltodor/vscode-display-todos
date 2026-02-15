@@ -3,7 +3,7 @@
     "displayName": "Display TODOs",
     "description": "Scans your workspace for TODO, FIXME, HACK, etc comments and displays them in the problems panel.",
     "icon": "./media/icon.png",
-    "version": "0.0.8",
+    "version": "0.0.9",
     "preview": false,
     "publisher": "danieltodor",
     "repository": {
@@ -111,7 +111,7 @@
                 },
                 "displayTodos.pattern": {
                     "type": "string",
-                    "default": "^\\s*(?:(?:\\/\\/|#)\\s*)?\\b({keywords})(?=[:\\s]|$)(?:\\s*:\\s*|\\s+)?(.*)$",
+                    "default": "^\\s*(?:(?:\\/\\/|#|--|;|'|%|\\/\\*|<!--|\\{\\-|\\(\\*|=begin|REM)[ \\t]*)?({keywords})(?=:[ \\t]*|[ \\t]|$)(?:[ \\t]*:[ \\t]*|[ \\t]+)?([^\\r\\n]*)$",
                     "description": "Regex pattern used to match keywords. Use {keywords} as a placeholder for the joined keyword alternatives. Must contain two capture groups: group 1 for the matched keyword and group 2 for the trailing text."
                 },
                 "displayTodos.caseSensitive": {

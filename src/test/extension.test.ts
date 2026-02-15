@@ -355,14 +355,27 @@ suite("Scanner — scanDocument", () =>
         };
 
         const mustMatch = [
+            { line: "TODO asd", message: "TODO: asd" },
+            { line: "   TODO", message: "TODO" },
+            { line: "\tTODO", message: "TODO" },
             { line: "// TODO asdasd sdsdf sdfsdf", message: "TODO: asdasd sdsdf sdfsdf" },
             { line: "// TODO: asdasd sdsdf sdfsdf", message: "TODO: asdasd sdsdf sdfsdf" },
-            { line: "// TODO", message: "TODO" },
             { line: "//TODO", message: "TODO" },
+            { line: "// TODO", message: "TODO" },
             { line: "#TODO", message: "TODO" },
             { line: "# TODO", message: "TODO" },
             { line: "TODO", message: "TODO" },
-            { line: "TODO asdasd", message: "TODO: asdasd" }
+            { line: "TODO asdasd", message: "TODO: asdasd" },
+            { line: "-- TODO", message: "TODO" },
+            { line: "; TODO", message: "TODO" },
+            { line: "' TODO", message: "TODO" },
+            { line: "% TODO", message: "TODO" },
+            { line: "/* TODO", message: "TODO" },
+            { line: "<!-- TODO", message: "TODO" },
+            { line: "{- TODO", message: "TODO" },
+            { line: "(* TODO", message: "TODO" },
+            { line: "=begin TODO", message: "TODO" },
+            { line: "REM TODO", message: "TODO" }
         ];
 
         const mustNotMatch = [
@@ -422,14 +435,27 @@ suite("Scanner — compile + text scanning", () =>
         const compiled = compileConfig(strictPatternConfig);
 
         const mustMatch = [
+            { line: "TODO asd", message: "TODO: asd" },
+            { line: "   TODO", message: "TODO" },
+            { line: "\tTODO", message: "TODO" },
             { line: "// TODO asdasd sdsdf sdfsdf", message: "TODO: asdasd sdsdf sdfsdf" },
             { line: "// TODO: asdasd sdsdf sdfsdf", message: "TODO: asdasd sdsdf sdfsdf" },
-            { line: "// TODO", message: "TODO" },
             { line: "//TODO", message: "TODO" },
+            { line: "// TODO", message: "TODO" },
             { line: "#TODO", message: "TODO" },
             { line: "# TODO", message: "TODO" },
             { line: "TODO", message: "TODO" },
-            { line: "TODO asdasd", message: "TODO: asdasd" }
+            { line: "TODO asdasd", message: "TODO: asdasd" },
+            { line: "-- TODO", message: "TODO" },
+            { line: "; TODO", message: "TODO" },
+            { line: "' TODO", message: "TODO" },
+            { line: "% TODO", message: "TODO" },
+            { line: "/* TODO", message: "TODO" },
+            { line: "<!-- TODO", message: "TODO" },
+            { line: "{- TODO", message: "TODO" },
+            { line: "(* TODO", message: "TODO" },
+            { line: "=begin TODO", message: "TODO" },
+            { line: "REM TODO", message: "TODO" }
         ];
 
         const mustNotMatch = [
