@@ -375,7 +375,8 @@ suite("Scanner — scanDocument", () =>
             { line: "{- TODO", message: "TODO" },
             { line: "(* TODO", message: "TODO" },
             { line: "=begin TODO", message: "TODO" },
-            { line: "REM TODO", message: "TODO" }
+            { line: "REM TODO", message: "TODO" },
+            { line: "asas asdasd// TODO asd", message: "TODO: asd" }
         ];
 
         const mustNotMatch = [
@@ -455,7 +456,8 @@ suite("Scanner — compile + text scanning", () =>
             { line: "{- TODO", message: "TODO" },
             { line: "(* TODO", message: "TODO" },
             { line: "=begin TODO", message: "TODO" },
-            { line: "REM TODO", message: "TODO" }
+            { line: "REM TODO", message: "TODO" },
+            { line: "asas asdasd// TODO asd", message: "TODO: asd" }
         ];
 
         const mustNotMatch = [

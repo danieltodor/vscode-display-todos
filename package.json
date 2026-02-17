@@ -3,7 +3,7 @@
     "displayName": "Display TODOs",
     "description": "Scans your workspace for TODO, FIXME, HACK, etc comments and displays them in the problems panel.",
     "icon": "./media/icon.png",
-    "version": "0.0.9",
+    "version": "0.0.10",
     "preview": false,
     "publisher": "danieltodor",
     "repository": {
@@ -80,7 +80,7 @@
                             "severity": "hint"
                         }
                     ],
-                    "description": "List of keywords to scan for and their diagnostic severities."
+                    "markdownDescription": "List of keywords to scan for and their diagnostic severities."
                 },
                 "displayTodos.include": {
                     "type": "array",
@@ -90,7 +90,7 @@
                     "default": [
                         "**/*"
                     ],
-                    "description": "Glob patterns for files to include when scanning."
+                    "markdownDescription": "Glob patterns for files to include when scanning."
                 },
                 "displayTodos.exclude": {
                     "type": "array",
@@ -107,23 +107,23 @@
                         "**/dist/**",
                         "**/out/**"
                     ],
-                    "description": "Glob patterns for files to exclude when scanning."
+                    "markdownDescription": "Glob patterns for files to exclude when scanning. If you only want the opened files to be scanned, exclude everything with `**/*`."
                 },
                 "displayTodos.pattern": {
                     "type": "string",
-                    "default": "^\\s*(?:(?:\\/\\/|#|--|;|'|%|\\/\\*|<!--|\\{\\-|\\(\\*|=begin|REM)[ \\t]*)?({keywords})(?=:[ \\t]*|[ \\t]|$)(?:[ \\t]*:[ \\t]*|[ \\t]+)?([^\\r\\n]*)$",
-                    "description": "Regex pattern used to match keywords. Use {keywords} as a placeholder for the joined keyword alternatives. Must contain two capture groups: group 1 for the matched keyword and group 2 for the trailing text."
+                    "default": "(?:^[ \\t]*|(?:\\/\\/|#|--|;|'|%|\\/\\*|<!--|\\{\\-|\\(\\*|=begin|REM)[ \\t]*)({keywords})(?::[ \\t]*|[ \\t]+|$)([^\\r\\n]*)$",
+                    "markdownDescription": "Regex pattern used to match keywords. Use {keywords} as a placeholder for the joined keyword alternatives. Must contain two capture groups: group 1 for the matched keyword and group 2 for the trailing text."
                 },
                 "displayTodos.caseSensitive": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Whether keyword matching is case-sensitive. When true, only exact case matches (e.g. TODO, not todo) are detected."
+                    "markdownDescription": "Whether keyword matching is case-sensitive. When true, only exact case matches (e.g. TODO, not todo) are detected."
                 },
                 "displayTodos.enable": {
                     "type": "boolean",
                     "default": true,
                     "scope": "language-overridable",
-                    "description": "Enable or disable scanning for TODO comments. When false, all diagnostics are cleared and no scanning occurs. Can be overridden per language (e.g. \"[python]\": { \"displayTodos.enable\": false })."
+                    "markdownDescription": "Enable or disable scanning for TODO comments. When false, all diagnostics are cleared and no scanning occurs. Can be overridden per language (e.g. \"[python]\": { \"displayTodos.enable\": false })."
                 }
             }
         }

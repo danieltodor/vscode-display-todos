@@ -1,3 +1,8 @@
+## [0.0.10] - 2026-02-17
+### Changed
+- Handle inline comments
+- Only select the comment, instead of the whole line
+
 ## [0.0.9] - 2026-02-15
 ### Changed
 - Improved regex for better comment handling
