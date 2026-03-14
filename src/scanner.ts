@@ -49,6 +49,7 @@ export interface ScanConfig
  */
 export interface CompiledConfig
 {
+    keywordProbe: RegExp;
     pattern: RegExp;
     severityLookup: Map<string, vscode.DiagnosticSeverity>;
     caseSensitive: boolean;
@@ -63,12 +64,14 @@ export function compileConfig(config: ScanConfig): CompiledConfig
     if (config.keywords.length === 0)
     {
         return {
-            pattern: /(?!)/,  // never-matching regex
+            keywordProbe: /(?!)/,
+            pattern: /(?!)/, // never-matching regex
             severityLookup: new Map(),
             caseSensitive: config.caseSensitive
         };
     }
     return {
+        keywordProbe: buildKeywordProbe(config.keywords, config.caseSensitive),
         pattern: buildPattern(config.keywords, config.pattern, config.caseSensitive),
         severityLookup: buildSeverityLookup(config.keywords, config.caseSensitive),
         caseSensitive: config.caseSensitive
@@ -98,6 +101,19 @@ function buildSeverityLookup(keywords: KeywordConfig[], caseSensitive: boolean):
         );
     }
     return map;
+}
+
+/**
+ * Build a cheap regex that only checks whether any configured keyword appears
+ * in the line at all before applying the full parsing regex.
+ */
+function buildKeywordProbe(keywords: KeywordConfig[], caseSensitive: boolean): RegExp
+{
+    const escaped = keywords.map((kw) =>
+        kw.keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    );
+    const flags = caseSensitive ? "" : "i";
+    return new RegExp(escaped.join("|"), flags);
 }
 
 /**
@@ -160,12 +176,17 @@ function scanLines(
     lineCount: number
 ): vscode.Diagnostic[]
 {
-    const { pattern, severityLookup, caseSensitive } = compiled;
+    const { keywordProbe, pattern, severityLookup, caseSensitive } = compiled;
     const diagnostics: vscode.Diagnostic[] = [];
 
     for (let lineIndex = 0; lineIndex < lineCount; lineIndex++)
     {
         const lineText = lineAt(lineIndex);
+        if (!keywordProbe.test(lineText))
+        {
+            continue;
+        }
+
         const match = pattern.exec(lineText);
         if (!match || match.index === undefined)
         {

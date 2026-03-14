@@ -398,8 +398,27 @@ suite("Scanner — compile + text scanning", () =>
     test("compileConfig with empty keywords creates never-matching pattern", () =>
     {
         const compiled = compileConfig({ ...DEFAULT_CONFIG, keywords: [] });
+        assert.strictEqual(compiled.keywordProbe.test("TODO"), false);
         const diagnostics = scanText("// TODO: should not match", compiled);
         assert.strictEqual(diagnostics.length, 0);
+    });
+
+    test("compileConfig creates a keyword probe that preserves case sensitivity", () =>
+    {
+        const caseSensitive = compileConfig({
+            ...DEFAULT_CONFIG,
+            keywords: [{ keyword: "TODO", severity: "warning" }],
+            caseSensitive: true
+        });
+        assert.strictEqual(caseSensitive.keywordProbe.test("TODO later"), true);
+        assert.strictEqual(caseSensitive.keywordProbe.test("todo later"), false);
+
+        const caseInsensitive = compileConfig({
+            ...DEFAULT_CONFIG,
+            keywords: [{ keyword: "TODO", severity: "warning" }],
+            caseSensitive: false
+        });
+        assert.strictEqual(caseInsensitive.keywordProbe.test("todo later"), true);
     });
 
     test("scanText respects case-insensitive matching and preserves configured source", () =>

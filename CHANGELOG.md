@@ -1,6 +1,7 @@
-## [?.?.?] - ???
+## [0.0.11] - 2026-03-14
 ### Changed
 - Removed BUG and REVIEW from the defaults, as they are not as widely used
+- Performance improvement
 
 ## [0.0.10] - 2026-02-17
 ### Changed
