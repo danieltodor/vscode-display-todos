@@ -200,18 +200,6 @@ suite("Scanner — scanDocument", () =>
         );
     });
 
-    test("detects a BUG comment as error", async () =>
-    {
-        const doc = await docFromText("# BUG: off-by-one");
-        const diagnostics = scanDocument(doc, DEFAULT_CONFIG);
-        assert.strictEqual(diagnostics.length, 1);
-        assert.strictEqual(diagnostics[0].message, "BUG: off-by-one");
-        assert.strictEqual(
-            diagnostics[0].severity,
-            vscode.DiagnosticSeverity.Error
-        );
-    });
-
     test("returns no diagnostics for lines without keywords", async () =>
     {
         const doc = await docFromText(

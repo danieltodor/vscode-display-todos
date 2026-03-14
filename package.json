@@ -56,10 +56,6 @@
                             "severity": "error"
                         },
                         {
-                            "keyword": "BUG",
-                            "severity": "error"
-                        },
-                        {
                             "keyword": "TODO",
                             "severity": "warning"
                         },
@@ -74,10 +70,6 @@
                         {
                             "keyword": "NOTE",
                             "severity": "info"
-                        },
-                        {
-                            "keyword": "REVIEW",
-                            "severity": "hint"
                         }
                     ],
                     "markdownDescription": "List of keywords to scan for and their diagnostic severities."

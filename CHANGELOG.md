@@ -1,3 +1,7 @@
+## [?.?.?] - ???
+### Changed
+- Removed BUG and REVIEW from the defaults, as they are not as widely used
+
 ## [0.0.10] - 2026-02-17
 ### Changed
 - Handle inline comments
