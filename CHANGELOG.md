@@ -1,3 +1,7 @@
+## [0.0.12] - 2026-03-29
+### Fixed
+- Improved token cancellation
+
 ## [0.0.11] - 2026-03-14
 ### Changed
 - Removed BUG and REVIEW from the defaults, as they are not as widely used
