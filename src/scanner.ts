@@ -367,6 +367,11 @@ export async function scanWorkspace(
     diagnosticCollection.clear();
     inScopeUris.clear();
 
+    if (token?.isCancellationRequested)
+    {
+        return;
+    }
+
     const globalEnable = vscode.workspace
         .getConfiguration(CONFIG_SECTION)
         .get<boolean>("enable", true);
@@ -379,7 +384,10 @@ export async function scanWorkspace(
     const decoder = new TextDecoder("utf-8");
     const uris = await getFileUris(config);
 
-    if (token?.isCancellationRequested) { return; }
+    if (token?.isCancellationRequested)
+    {
+        return;
+    }
 
     // Build the set of already-open document URIs so we can prefer the
     // in-memory version (which may have unsaved edits).
@@ -392,44 +400,56 @@ export async function scanWorkspace(
     // Process files in parallel batches
     for (let i = 0; i < uris.length; i += BATCH_SIZE)
     {
-        if (token?.isCancellationRequested) { return; }
+        if (token?.isCancellationRequested)
+        {
+            return;
+        }
 
         const batch = uris.slice(i, i + BATCH_SIZE);
         const results = await Promise.allSettled(
             batch.map(async (uri) =>
             {
-                const key = uri.toString();
-                inScopeUris.add(key);
+                if (token?.isCancellationRequested)
+                {
+                    throw new Error("scan cancelled");
+                }
 
+                const key = uri.toString();
                 // Prefer already-open document (has unsaved edits, already in memory)
                 const openDoc = openDocsByUri.get(key);
                 if (openDoc)
                 {
-                    return { uri, diagnostics: scanDocument(openDoc, compiled) };
+                    return { key, uri, diagnostics: scanDocument(openDoc, compiled) };
                 }
 
                 if (isLikelyBinaryByExtension(uri))
                 {
-                    return { uri, diagnostics: [] };
+                    return { key, uri, diagnostics: [] };
                 }
 
                 // Read raw bytes — much cheaper than openTextDocument
                 const bytes = await vscode.workspace.fs.readFile(uri);
                 if (isLikelyBinaryContent(uri, bytes))
                 {
-                    return { uri, diagnostics: [] };
+                    return { key, uri, diagnostics: [] };
                 }
 
                 const text = decoder.decode(bytes);
-                return { uri, diagnostics: scanText(text, compiled) };
+                return { key, uri, diagnostics: scanText(text, compiled) };
             })
         );
+
+        if (token?.isCancellationRequested)
+        {
+            return;
+        }
 
         for (const result of results)
         {
             if (result.status === "fulfilled")
             {
-                const { uri, diagnostics } = result.value;
+                const { key, uri, diagnostics } = result.value;
+                inScopeUris.add(key);
                 if (diagnostics.length > 0)
                 {
                     diagnosticCollection.set(uri, diagnostics);
@@ -439,11 +459,19 @@ export async function scanWorkspace(
         }
     }
 
-    if (token?.isCancellationRequested) { return; }
+    if (token?.isCancellationRequested)
+    {
+        return;
+    }
 
     // Scan opened editors that weren't covered by the file-glob scan
     for (const document of vscode.workspace.textDocuments)
     {
+        if (token?.isCancellationRequested)
+        {
+            return;
+        }
+
         const key = document.uri.toString();
         if (document.uri.scheme !== "file" || inScopeUris.has(key))
         {

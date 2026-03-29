@@ -474,7 +474,6 @@ suite("Scanner - workspace scan", () =>
     {
         const uri = await writeTestFile("scan/unsaved.ts", "const value = 1;\n");
         const document = await vscode.workspace.openTextDocument(uri);
-        await vscode.window.showTextDocument(document);
 
         const edit = new vscode.WorkspaceEdit();
         const end = document.positionAt(document.getText().length);
@@ -526,6 +525,81 @@ suite("Scanner - workspace scan", () =>
 
         assert.strictEqual(collection.get(vscode.Uri.parse("file:///stale"))?.length ?? 0, 0);
         assert.strictEqual(inScopeUris.size, 0);
+    });
+
+    test("scanWorkspace does not retain batch scope entries after cancellation", async () =>
+    {
+        await writeTestFile("scan/cancel-batch-one.ts", "// TODO: first\n");
+        await writeTestFile("scan/cancel-batch-two.ts", "// TODO: second\n");
+
+        let readCount = 0;
+        const token: vscode.CancellationToken = {
+            get isCancellationRequested()
+            {
+                readCount++;
+                return readCount >= 5;
+            },
+            onCancellationRequested: () => ({ dispose() { } })
+        };
+
+        await scanWorkspace(
+            collection,
+            {
+                ...DEFAULT_CONFIG,
+                include: [`${TEST_ROOT_DIR}/scan/cancel-batch-*.ts`],
+                exclude: []
+            },
+            inScopeUris,
+            token
+        );
+
+        assert.strictEqual(inScopeUris.size, 0);
+    });
+
+    test("scanWorkspace stops the open-document pass when cancelled", async () =>
+    {
+        const firstUri = await writeTestFile("open-docs/first.ts", "// TODO: first\n");
+        const secondUri = await writeTestFile("open-docs/second.ts", "// TODO: second\n");
+
+        await vscode.workspace.openTextDocument(firstUri);
+        await vscode.workspace.openTextDocument(secondUri);
+
+        const openDocs = vscode.workspace.textDocuments;
+        const firstIndex = openDocs.findIndex((document) => document.uri.toString() === firstUri.toString());
+        const secondIndex = openDocs.findIndex((document) => document.uri.toString() === secondUri.toString());
+
+        assert.ok(firstIndex >= 0);
+        assert.ok(secondIndex >= 0);
+
+        const [scannedUri, skippedUri, skippedIndex] = firstIndex < secondIndex
+            ? [firstUri, secondUri, secondIndex]
+            : [secondUri, firstUri, firstIndex];
+
+        let readCount = 0;
+        const token: vscode.CancellationToken = {
+            get isCancellationRequested()
+            {
+                readCount++;
+                return readCount >= 4 + skippedIndex;
+            },
+            onCancellationRequested: () => ({ dispose() { } })
+        };
+
+        await scanWorkspace(
+            collection,
+            {
+                ...DEFAULT_CONFIG,
+                include: [`${TEST_ROOT_DIR}/does-not-match/**/*.ts`],
+                exclude: []
+            },
+            inScopeUris,
+            token
+        );
+
+        assert.strictEqual(collection.get(scannedUri)?.length ?? 0, 1);
+        assert.strictEqual(collection.get(skippedUri)?.length ?? 0, 0);
+        assert.ok(inScopeUris.has(scannedUri.toString()));
+        assert.ok(!inScopeUris.has(skippedUri.toString()));
     });
 
     test("scanWorkspace skips binary files by extension", async () =>
